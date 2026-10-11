@@ -1,0 +1,40 @@
+const USER_STATUS = Object.freeze({
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+});
+
+const ATTENDANCE_STATUS = Object.freeze({
+  PRESENT: 'PRESENT',
+  ABSENT: 'ABSENT',
+  LATE: 'LATE',
+  HALF_DAY: 'HALF_DAY',
+});
+
+const EXAM_TYPES = Object.freeze({
+  WEEKLY: 'WEEKLY',
+  MONTHLY: 'MONTHLY',
+  HALF_YEARLY: 'HALF_YEARLY',
+  ANNUAL: 'ANNUAL',
+});
+
+const LEAVE_STATUS = Object.freeze({
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+});
+
+const FEE_STATUS = Object.freeze({
+  PAID: 'PAID',
+  PARTIAL: 'PARTIAL',
+  PENDING: 'PENDING',
+  OVERDUE: 'OVERDUE',
+});
+
+module.exports = {
+  USER_STATUS,
+  ATTENDANCE_STATUS,
+  EXAM_TYPES,
+  LEAVE_STATUS,
+  FEE_STATUS,
+};
