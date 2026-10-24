@@ -31,6 +31,11 @@ const subjectMarkSchema = new mongoose.Schema(
 
 const examResultSchema = new mongoose.Schema(
   {
+    schoolId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'School',
+      default: null,
+    },
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Student',
@@ -41,6 +46,21 @@ const examResultSchema = new mongoose.Schema(
       ref: 'ClassRoom',
       required: true,
     },
+    approvalStatus: {
+      type: String,
+      enum: ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'],
+      default: 'APPROVED',
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    approvalNotes: {
+      type: String,
+      default: '',
+    },
+
     examType: {
       type: String,
       enum: Object.values(EXAM_TYPES),

@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScholarCloud • Super Admin Enterprise Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/super-admin/style.css">
+</head>
+<body class="dark-theme">
+  <!-- Authentication Overlay if not logged in -->
+  <div id="authOverlay" class="auth-overlay hidden">
+    <div class="auth-card glass-panel">
+      <div class="auth-header">
+        <div class="logo-box">
+          <i class="fa-solid fa-shield-halved logo-icon"></i>
+        </div>
+        <h2>ScholarCloud OS</h2>
+        <p>Enterprise Super Administrator Command Portal</p>
+      </div>
+      <form id="loginForm" class="auth-form">
+        <div class="form-group">
+          <label><i class="fa-solid fa-envelope"></i> Super Admin Email</label>
+          <input type="email" id="loginEmail" value="superadmin@scholarcloud.com" required>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-lock"></i> Master Password</label>
+          <input type="password" id="loginPassword" value="Password@123" required>
+        </div>
+        <div class="auth-btn-wrapper">
+          <button type="submit" id="loginBtn" class="btn btn-primary btn-block">
+            <i class="fa-solid fa-key"></i> Authenticate & Enter Portal
+          </button>
+        </div>
+        <div id="authError" class="auth-error-msg hidden"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main App Shell -->
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-icon">
+            <i class="fa-solid fa-crown"></i>
+          </div>
+          <div class="brand-info">
+            <h1>ScholarCloud</h1>
+            <span class="badge badge-super">Super Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">MAIN CONTROLLER</div>
+        <button class="nav-item active" data-tab="dashboard">
+          <i class="fa-solid fa-gauge-high"></i>
+          <span>Dashboard Overview</span>
+        </button>
+        <button class="nav-item" data-tab="schools">
+          <i class="fa-solid fa-school"></i>
+          <span>School Management</span>
+          <span class="nav-badge" id="badgeSchoolsCount">0</span>
+        </button>
+        <button class="nav-item" data-tab="admins">
+          <i class="fa-solid fa-user-shield"></i>
+          <span>School Admins</span>
+          <span class="nav-badge warning" id="badgePendingAdmins">0</span>
+        </button>
+        <button class="nav-item" data-tab="permissions">
+          <i class="fa-solid fa-sliders"></i>
+          <span>Permissions & Limits</span>
+        </button>
+
+        <div class="nav-section-title">INSTITUTIONAL OVERSIGHT</div>
+        <button class="nav-item" data-tab="students">
+          <i class="fa-solid fa-user-graduate"></i>
+          <span>Students & Admission</span>
+        </button>
+        <button class="nav-item" data-tab="staff">
+          <i class="fa-solid fa-chalkboard-user"></i>
+          <span>Faculty & Staff</span>
+        </button>
+        <button class="nav-item" data-tab="biometric">
+          <i class="fa-solid fa-fingerprint"></i>
+          <span>Biometric & Attendance</span>
+        </button>
+        <button class="nav-item" data-tab="fleet">
+          <i class="fa-solid fa-bus"></i>
+          <span>Bus Fleet & GPS</span>
+          <span class="nav-badge pulse" id="badgeBusAlerts">0</span>
+        </button>
+        <button class="nav-item" data-tab="exams">
+          <i class="fa-solid fa-file-signature"></i>
+          <span>Exams & Results</span>
+        </button>
+        <button class="nav-item" data-tab="financials">
+          <i class="fa-solid fa-sack-dollar"></i>
+          <span>Central Financials</span>
+        </button>
+
+        <div class="nav-section-title">SYSTEM & SECURITY</div>
+        <button class="nav-item" data-tab="broadcast">
+          <i class="fa-solid fa-bullhorn"></i>
+          <span>Central Broadcast</span>
+        </button>
+        <button class="nav-item" data-tab="settings">
+          <i class="fa-solid fa-gears"></i>
+          <span>System & Audit Logs</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-chip">
+          <div class="user-avatar" id="superAdminAvatar">SA</div>
+          <div class="user-details">
+            <span class="user-name" id="superAdminName">Dr. Amitabh Sen</span>
+            <span class="user-role">Chief Platform Admin</span>
+          </div>
+          <button id="logoutBtn" class="btn-icon" title="Logout">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Action Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="mobileMenuToggle" class="btn-icon mobile-only">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="current-screen-info">
+            <h2 id="currentScreenTitle">Platform Master Dashboard</h2>
+            <p id="currentScreenSubtitle">Real-time cross-school enterprise monitoring & multi-tenant controls</p>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Live Status Indicator -->
+          <div class="status-indicator">
+            <span class="pulse-dot"></span>
+            <span class="status-text">Backend Active (v2.0)</span>
+          </div>
+
+          <!-- Academic Year Selector -->
+          <div class="academic-badge">
+            <i class="fa-solid fa-calendar-check"></i>
+            <span id="headerAcademicYear">AY 2026-27</span>
+          </div>
+
+          <button id="refreshDataBtn" class="btn btn-secondary">
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Views (Tabs) -->
+      <div class="content-body">
+        
+        <!-- ================= TAB 1: DASHBOARD ================= -->
+        <section id="tab-dashboard" class="tab-view active">
+          <!-- Top KPI Grid -->
+          <div class="kpi-grid">
+            <div class="kpi-card glass-panel">
+              <div class="kpi-icon-wrap indigo">
+                <i class="fa-solid fa-school"></i>
+              </div>
+              <div class="kpi-content">
+                <span class="kpi-title">Total Schools</span>
+                <h3 class="kpi-value" id="kpiTotalSchools">0</h3>
+                <div class="kpi-breakdown">
+                  <span class="tag-success"><span id="kpiActiveSchools">0</span> Active</span>
+                  <span class="tag-warning"><span id="kpiPendingSchools">0</span> Pending</span>
+                  <span class="tag-danger"><span id="kpiSuspendedSchools">0</span> Suspended</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi-card glass-panel">
+              <div class="kpi-icon-wrap emerald">
+                <i class="fa-solid fa-users"></i>
+              </div>
+              <div class="kpi-content">
+                <span class="kpi-title">Platform Users</span>
+                <h3 class="kpi-value" id="kpiTotalUsers">0</h3>
+                <div class="kpi-breakdown">
+                  <span>Admins: <strong id="kpiAdmins">0</strong></span>
+                  <span>Teachers: <strong id="kpiTeachers">0</strong></span>
+                  <span>Students: <strong id="kpiStudents">0</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi-card glass-panel">
+              <div class="kpi-icon-wrap amber">
+                <i class="fa-solid fa-bus"></i>
+              </div>
+              <div class="kpi-content">
+                <span class="kpi-title">Bus Fleet GPS</span>
+                <h3 class="kpi-value" id="kpiActiveBuses">0</h3>
+                <div class="kpi-breakdown">
+                  <span class="tag-success"><span id="kpiActiveTrips">0</span> Active Trips</span>
+                  <span class="tag-warning"><span id="kpiBusAlerts">0</span> Alerts</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi-card glass-panel">
+              <div class="kpi-icon-wrap purple">
+                <i class="fa-solid fa-indian-rupee-sign"></i>
+              </div>
+              <div class="kpi-content">
+                <span class="kpi-title">Central Fee Collected</span>
+                <h3 class="kpi-value" id="kpiFeeCollected">₹0</h3>
+                <div class="kpi-breakdown">
+                  <span>Pending: <strong id="kpiFeePending">₹0</strong></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Secondary Grid: Biometric & Live Trips -->
+          <div class="dashboard-dual-grid">
+            <!-- Biometric Health Widget -->
+            <div class="glass-panel widget-panel">
+              <div class="widget-header">
+                <div class="widget-title">
+                  <i class="fa-solid fa-fingerprint icon-emerald"></i>
+                  <h4>Biometric Attendance Terminals</h4>
+                </div>
+                <button class="btn btn-sm btn-ghost" onclick="switchTab('biometric')">View All</button>
+              </div>
+              <div class="device-list" id="dashboardBiometricList">
+                <div class="empty-state">Loading biometric devices...</div>
+              </div>
+            </div>
+
+            <!-- Recent Security Audit Log -->
+            <div class="glass-panel widget-panel">
+              <div class="widget-header">
+                <div class="widget-title">
+                  <i class="fa-solid fa-clock-rotate-left icon-indigo"></i>
+                  <h4>Recent Administrative Actions</h4>
+                </div>
+                <button class="btn btn-sm btn-ghost" onclick="switchTab('settings')">Audit Trail</button>
+              </div>
+              <div class="audit-list" id="dashboardAuditList">
+                <div class="empty-state">Loading audit history...</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= TAB 2: SCHOOLS MANAGEMENT ================= -->
+        <section id="tab-schools" class="tab-view">
+          <div class="table-actions-bar glass-panel">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="schoolSearchInput" placeholder="Search school name, code, board, city...">
+            </div>
+            <div class="filter-controls">
+              <select id="schoolStatusFilter" class="select-input">
+                <option value="ALL">All Statuses</option>
+                <option value="ACTIVE">Active</option>
+                <option value="PENDING">Pending Approval</option>
+                <option value="SUSPENDED">Suspended</option>
+              </select>
+              <button class="btn btn-primary" onclick="openCreateSchoolModal()">
+                <i class="fa-solid fa-plus"></i>
+                <span>Register New School</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-panel table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>School & Code</th>
+                  <th>Affiliation / Board</th>
+                  <th>Principal / Contact</th>
+                  <th>Current Capacity</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="schoolsTableBody">
+                <tr><td colspan="6" class="text-center">Loading registered schools...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= TAB 3: SCHOOL ADMINS ================= -->
+        <section id="tab-admins" class="tab-view">
+          <div class="table-actions-bar glass-panel">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="adminSearchInput" placeholder="Search admin by name, email, phone...">
+            </div>
+            <div class="filter-controls">
+              <button class="btn btn-primary" onclick="openCreateAdminModal()">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>Create School Admin</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-panel table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Administrator</th>
+                  <th>Assigned School</th>
+                  <th>Phone / Email</th>
+                  <th>Status</th>
+                  <th>Account Created</th>
+                  <th>Governance Controls</th>
+                </tr>
+              </thead>
+              <tbody id="adminsTableBody">
+                <tr><td colspan="6" class="text-center">Loading school administrators...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= TAB 4: PERMISSION MATRIX & LIMITS ================= -->
+        <section id="tab-permissions" class="tab-view">
+          <div class="glass-panel config-header-card">
+            <div class="config-picker">
+              <label><i class="fa-solid fa-building-columns"></i> Select School to Configure:</label>
+              <select id="permissionSchoolSelect" class="select-input select-large" onchange="loadSchoolPermissionsForEdit()">
+                <option value="">-- Choose Target Institution --</option>
+              </select>
+            </div>
+            <div class="school-quick-meta" id="schoolQuickMeta">
+              <span>Select a school above to inspect and edit module switches & usage ceilings</span>
+            </div>
+          </div>
+
+          <form id="permissionMatrixForm" onsubmit="saveSchoolPermissions(event)">
+            <div class="matrix-grid">
+              <!-- Module Activation Switches -->
+              <div class="glass-panel matrix-card">
+                <div class="matrix-card-header">
+                  <i class="fa-solid fa-toggle-on icon-indigo"></i>
+                  <h3>Institution Module Toggles</h3>
+                </div>
+                <p class="matrix-card-desc">Enable or revoke access to modular capabilities for this school.</p>
+                <div class="modules-toggle-list" id="modulesToggleList">
+                  <!-- Dynamic check toggles -->
+                </div>
+              </div>
+
+              <!-- Capacity Ceilings & Storage Limits -->
+              <div class="glass-panel matrix-card">
+                <div class="matrix-card-header">
+                  <i class="fa-solid fa-gauge icon-emerald"></i>
+                  <h3>Enrolment & Storage Ceilings</h3>
+                </div>
+                <p class="matrix-card-desc">When limits are breached, new enrolments are automatically guarded.</p>
+                
+                <div class="limits-inputs-grid">
+                  <div class="form-group">
+                    <label>Max Allowed Students</label>
+                    <input type="number" id="limitMaxStudents" class="input-field" min="1" max="10000" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Max Allowed Teachers</label>
+                    <input type="number" id="limitMaxTeachers" class="input-field" min="1" max="500" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Max Allowed Staff</label>
+                    <input type="number" id="limitMaxStaff" class="input-field" min="1" max="500" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Cloud Storage Quota (MB)</label>
+                    <input type="number" id="limitStorageMB" class="input-field" min="500" max="100000" required>
+                  </div>
+                </div>
+
+                <div class="usage-meter-box" id="limitsUsageMeter">
+                  <!-- Injected via JS -->
+                </div>
+              </div>
+            </div>
+
+            <!-- ROCK SOLID STICKY SUBMIT BAR: NEVER HIDDEN -->
+            <div class="sticky-form-footer">
+              <div class="sticky-footer-content">
+                <div class="sticky-footer-text">
+                  <i class="fa-solid fa-shield-halved text-primary"></i>
+                  <span>All changes are strictly validated and logged in the Super Admin platform audit log.</span>
+                </div>
+                <button type="submit" id="savePermissionsBtn" class="btn btn-primary btn-large">
+                  <i class="fa-solid fa-floppy-disk"></i>
+                  <span>Save Modules & Quotas</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <!-- ================= TAB 5: STUDENTS & ADMISSIONS ================= -->
+        <section id="tab-students" class="tab-view">
+          <div class="table-actions-bar glass-panel">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="studentSearchInput" placeholder="Search student by name, roll no, school...">
+            </div>
+            <div class="filter-controls">
+              <select id="studentSchoolFilter" class="select-input" onchange="loadSuperAdminStudents()">
+                <option value="">All Schools</option>
+              </select>
+              <button class="btn btn-secondary" onclick="checkDuplicateStudents()">
+                <i class="fa-solid fa-copy"></i>
+                <span>Cross-School Duplicate Check</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-panel table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Student Name</th>
+                  <th>School</th>
+                  <th>Grade & Section</th>
+                  <th>Roll / Admission No</th>
+                  <th>Parent / Guardian</th>
+                  <th>Enrolment Status</th>
+                </tr>
+              </thead>
+              <tbody id="studentsTableBody">
+                <tr><td colspan="6" class="text-center">Loading student records...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= TAB 6: FACULTY & STAFF ================= -->
+        <section id="tab-staff" class="tab-view">
+          <div class="table-actions-bar glass-panel">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="staffSearchInput" placeholder="Search teacher or staff by name, email, employee ID...">
+            </div>
+            <div class="filter-controls">
+              <select id="staffSchoolFilter" class="select-input" onchange="loadSuperAdminStaff()">
+                <option value="">All Schools</option>
+              </select>
+              <button class="btn btn-secondary" onclick="loadDuplicateStaffCheck()">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Duplicate Employee ID Audit</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-panel table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Faculty / Staff Member</th>
+                  <th>School Institution</th>
+                  <th>Employee ID</th>
+                  <th>Designation / Subjects</th>
+                  <th>Phone / Email</th>
+                  <th>Account Status</th>
+                </tr>
+              </thead>
+              <tbody id="staffTableBody">
+                <tr><td colspan="6" class="text-center">Loading faculty directory...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= TAB 7: BIOMETRIC & ATTENDANCE ================= -->
+        <section id="tab-biometric" class="tab-view">
+          <div class="table-actions-bar glass-panel">
+            <div class="section-badge-info">
+              <i class="fa-solid fa-fingerprint text-emerald"></i>
+              <span>Hardware Synced Devices & Cross-Campus Attendance Overrides</span>
+            </div>
+            <div class="filter-controls">
+              <button class="btn btn-secondary" onclick="openManualAttendanceOverrideModal()">
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>Manual Attendance Override</span>
+              </button>
+              <button class="btn btn-primary" onclick="openCreateBiometricModal()">
+                <i class="fa-solid fa-plus"></i>
+                <span>Register Biometric Device</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="devices-grid" id="biometricDevicesGrid">
+            <!-- Dynamically populated -->
+          </div>
+        </section>
+
+        <!-- ================= TAB 8: BUS FLEET & LIVE GPS ================= -->
+        <section id="tab-fleet" class="tab-view">
+          <div class="table-actions-bar glass-panel">
+            <div class="section-badge-info">
+              <i class="fa-solid fa-bus text-amber"></i>
+              <span>Fleet Monitoring, GPS Telemetry & Compliance Warnings</span>
+            </div>
+            <div class="filter-controls">
+              <button class="btn btn-secondary" onclick="loadBusAlertsModal()">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Pollution & Fitness Expiries</span>
+              </button>
+              <button class="btn btn-primary" onclick="openCreateBusModal()">
+                <i class="fa-solid fa-plus"></i>
+                <span>Add Fleet Vehicle</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="fleet-cards-grid" id="fleetCardsGrid">
+            <!-- Dynamically populated -->
+          </div>
+        </section>
+
+        <!-- ================= TAB 9: EXAMS & RESULTS ================= -->
+        <section id="tab-exams" class="tab-view">
+          <div class="table-actions-bar glass-panel">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="examSearchInput" placeholder="Search by exam title, subject, school...">
+            </div>
+            <div class="filter-controls">
+              <select id="examSchoolFilter" class="select-input" onchange="loadSuperAdminExams()">
+                <option value="">All Schools</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="glass-panel table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Exam / Assessment</th>
+                  <th>School Institution</th>
+                  <th>Class / Section</th>
+                  <th>Subject</th>
+                  <th>Publishing Status</th>
+                  <th>Super Admin Controls</th>
+                </tr>
+              </thead>
+              <tbody id="examsTableBody">
+                <tr><td colspan="6" class="text-center">Loading academic examinations...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= TAB 10: CENTRAL FINANCIALS ================= -->
+        <section id="tab-financials" class="tab-view">
+          <div class="table-actions-bar glass-panel">
+            <div class="section-badge-info">
+              <i class="fa-solid fa-sack-dollar text-emerald"></i>
+              <span>Cross-Institution Fee Collections, Balances & Adjustments</span>
+            </div>
+            <div class="filter-controls">
+              <button class="btn btn-primary" onclick="openFeeCorrectionModal()">
+                <i class="fa-solid fa-scale-balanced"></i>
+                <span>Record Fee Correction / Concession</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="financials-kpis-grid" id="financialsKpisGrid">
+            <!-- Populated via JS -->
+          </div>
+
+          <div class="glass-panel table-container mt-4">
+            <div class="panel-header">
+              <h3>School-wise Revenue & Outstanding Fee Summary</h3>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>School</th>
+                  <th>Total Billed</th>
+                  <th>Total Collected</th>
+                  <th>Outstanding Dues</th>
+                  <th>Collection Rate</th>
+                </tr>
+              </thead>
+              <tbody id="schoolFinancialsTableBody">
+                <tr><td colspan="5" class="text-center">Loading financial overview...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= TAB 11: CENTRAL BROADCAST ================= -->
+        <section id="tab-broadcast" class="tab-view">
+          <div class="glass-panel broadcast-card">
+            <div class="matrix-card-header">
+              <i class="fa-solid fa-tower-broadcast icon-indigo"></i>
+              <h3>Platform-Wide Central Broadcast</h3>
+            </div>
+            <p class="matrix-card-desc">Send targeted or network-wide emergency notices, holidays, and circulars directly to student and parent mobile apps.</p>
+
+            <form id="broadcastForm" onsubmit="sendCentralBroadcast(event)">
+              <div class="form-row">
+                <div class="form-group flex-2">
+                  <label>Announcement Title</label>
+                  <input type="text" id="broadcastTitle" class="input-field" placeholder="e.g. Urgent Severe Weather Advisory - All Campuses Closed" required>
+                </div>
+                <div class="form-group flex-1">
+                  <label>Target Audience</label>
+                  <select id="broadcastTarget" class="select-input">
+                    <option value="ALL">Entire Platform (All Schools)</option>
+                    <option value="ADMINS">All School Admins Only</option>
+                    <option value="TEACHERS">All Teachers Only</option>
+                    <option value="PARENTS">All Parents Only</option>
+                    <option value="SPECIFIC_SCHOOL">Target Specific School</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group hidden" id="targetSchoolGroup">
+                <label>Select Target School</label>
+                <select id="broadcastTargetSchool" class="select-input">
+                  <option value="">-- Choose School --</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Message Content / Circular</label>
+                <textarea id="broadcastMessage" class="input-field textarea-field" rows="4" placeholder="Type the complete circular text here..." required></textarea>
+              </div>
+
+              <!-- ROCK SOLID STICKY SUBMIT BAR: NEVER HIDDEN -->
+              <div class="sticky-form-footer">
+                <div class="sticky-footer-content">
+                  <div class="sticky-footer-text">
+                    <i class="fa-solid fa-satellite-dish text-primary"></i>
+                    <span>Dispatches via Push Notification + Socket.io realtime channel.</span>
+                  </div>
+                  <button type="submit" id="sendBroadcastBtn" class="btn btn-primary btn-large">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Transmit Central Broadcast</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <div class="glass-panel table-container mt-4">
+            <div class="panel-header">
+              <h3>Broadcast Dispatch History & Delivery Status</h3>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Title & Notice</th>
+                  <th>Target Scope</th>
+                  <th>Recipients Reached</th>
+                  <th>Timestamp</th>
+                  <th>Delivery Status</th>
+                </tr>
+              </thead>
+              <tbody id="broadcastHistoryTableBody">
+                <tr><td colspan="5" class="text-center">Loading broadcast logs...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ================= TAB 12: SYSTEM SETTINGS & AUDIT ================= -->
+        <section id="tab-settings" class="tab-view">
+          <div class="settings-grid">
+            <!-- Platform Config -->
+            <div class="glass-panel matrix-card">
+              <div class="matrix-card-header">
+                <i class="fa-solid fa-sliders icon-purple"></i>
+                <h3>Platform Configuration</h3>
+              </div>
+              <form id="platformSettingsForm" onsubmit="savePlatformSettings(event)">
+                <div class="form-group">
+                  <label>Current Academic Session</label>
+                  <input type="text" id="settingAcademicYear" class="input-field" value="2026-2027" required>
+                </div>
+                <div class="form-group">
+                  <label>System Maintenance Mode</label>
+                  <select id="settingMaintenanceMode" class="select-input">
+                    <option value="false">Disabled (Normal Operations)</option>
+                    <option value="true">Enabled (Restricted Super Admin Only)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Emergency Platform Notice Banner</label>
+                  <input type="text" id="settingNoticeBanner" class="input-field" placeholder="Optional network banner text...">
+                </div>
+
+                <div class="sticky-form-footer">
+                  <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fa-solid fa-save"></i>
+                    <span>Update Platform Settings</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Instant Database Backup -->
+            <div class="glass-panel matrix-card">
+              <div class="matrix-card-header">
+                <i class="fa-solid fa-database icon-emerald"></i>
+                <h3>Database Backup & Disaster Recovery</h3>
+              </div>
+              <p class="matrix-card-desc">Execute an on-demand snapshot archive of the entire multi-school database to secure cloud storage.</p>
+              
+              <div class="backup-status-card" id="backupStatusCard">
+                <div class="status-row">
+                  <span>Last Automated Backup:</span>
+                  <strong id="lastBackupTime">Just now</strong>
+                </div>
+                <div class="status-row">
+                  <span>Archive Integrity:</span>
+                  <strong class="text-success"><i class="fa-solid fa-circle-check"></i> Verified (SHA-256)</strong>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <button type="button" class="btn btn-secondary btn-block" onclick="triggerManualBackup()">
+                  <i class="fa-solid fa-cloud-arrow-up"></i>
+                  <span>Trigger Instant Database Snapshot</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audit Logs Table -->
+          <div class="glass-panel table-container mt-4">
+            <div class="panel-header">
+              <h3>Immutable Security & Audit Trail</h3>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Action</th>
+                  <th>Administrator</th>
+                  <th>Target Institution</th>
+                  <th>IP Address</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="securityAuditTableBody">
+                <tr><td colspan="6" class="text-center">Loading audit log stream...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ================= MODALS CONTAINER (All with non-hidden sticky submit buttons) ================= -->
+  
+  <!-- 1. Create School Modal -->
+  <div id="createSchoolModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-school text-primary"></i> Register New School</h3>
+        <button class="btn-close" onclick="closeModal('createSchoolModal')">&times;</button>
+      </div>
+      <form id="createSchoolForm" onsubmit="submitCreateSchool(event)">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>School Legal Name *</label>
+              <input type="text" id="newSchoolName" class="input-field" placeholder="e.g. St. Xavier International Academy" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>School Code *</label>
+              <input type="text" id="newSchoolCode" class="input-field" placeholder="e.g. SXIA-DEL" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Affiliation / Board *</label>
+              <select id="newSchoolBoard" class="select-input" required>
+                <option value="CBSE">CBSE</option>
+                <option value="ICSE">ICSE</option>
+                <option value="STATE">State Board</option>
+                <option value="IB">IB / Cambridge</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label>Academic Year</label>
+              <input type="text" id="newSchoolAY" class="input-field" value="2026-2027" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Contact Email</label>
+              <input type="email" id="newSchoolEmail" class="input-field" placeholder="principal@sxia.edu">
+            </div>
+            <div class="form-group flex-1">
+              <label>Contact Phone</label>
+              <input type="tel" id="newSchoolPhone" class="input-field" placeholder="+91 98765 43210">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Campus Address</label>
+            <input type="text" id="newSchoolAddress" class="input-field" placeholder="Full address including city, state, pin">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Initial Max Students</label>
+              <input type="number" id="newSchoolMaxStudents" class="input-field" value="1000" min="50">
+            </div>
+            <div class="form-group flex-1">
+              <label>Initial Max Teachers</label>
+              <input type="number" id="newSchoolMaxTeachers" class="input-field" value="80" min="5">
+            </div>
+          </div>
+        </div>
+
+        <!-- STICKY SUBMIT FOOTER: ALWAYS VISIBLE -->
+        <div class="modal-footer sticky-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('createSchoolModal')">Cancel</button>
+          <button type="submit" id="createSchoolSubmitBtn" class="btn btn-primary">
+            <i class="fa-solid fa-check"></i> Register School
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Create School Admin Modal -->
+  <div id="createAdminModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-shield text-primary"></i> Create School Administrator</h3>
+        <button class="btn-close" onclick="closeModal('createAdminModal')">&times;</button>
+      </div>
+      <form id="createAdminForm" onsubmit="submitCreateAdmin(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Target School Institution *</label>
+            <select id="newAdminSchoolSelect" class="select-input" required>
+              <option value="">-- Assign to School --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="newAdminName" class="input-field" placeholder="e.g. Rajesh Kumar Sharma" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Official Email *</label>
+              <input type="email" id="newAdminEmail" class="input-field" placeholder="admin@school.com" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Mobile Number *</label>
+              <input type="tel" id="newAdminPhone" class="input-field" placeholder="9876543210" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Initial Password *</label>
+            <input type="password" id="newAdminPassword" class="input-field" value="Password@123" required>
+          </div>
+        </div>
+
+        <div class="modal-footer sticky-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('createAdminModal')">Cancel</button>
+          <button type="submit" id="createAdminSubmitBtn" class="btn btn-primary">
+            <i class="fa-solid fa-user-check"></i> Create Admin Account
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Edit Admin Permissions Modal -->
+  <div id="editAdminPermissionsModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-key text-primary"></i> Admin Granular Permission Matrix</h3>
+        <button class="btn-close" onclick="closeModal('editAdminPermissionsModal')">&times;</button>
+      </div>
+      <form id="editAdminPermissionsForm" onsubmit="submitAdminPermissions(event)">
+        <input type="hidden" id="editAdminId">
+        <div class="modal-body">
+          <p id="editAdminSubtitle" class="text-secondary mb-3">Configuring permission matrix for administrator...</p>
+          <div class="permission-checkboxes-grid" id="adminPermissionsCheckboxes">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+        <div class="modal-footer sticky-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editAdminPermissionsModal')">Cancel</button>
+          <button type="submit" id="submitAdminPermissionsBtn" class="btn btn-primary">
+            <i class="fa-solid fa-check-double"></i> Save Permission Matrix
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Fee Correction Modal -->
+  <div id="feeCorrectionModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-scale-balanced text-primary"></i> Record Central Fee Correction</h3>
+        <button class="btn-close" onclick="closeModal('feeCorrectionModal')">&times;</button>
+      </div>
+      <form id="feeCorrectionForm" onsubmit="submitFeeCorrection(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Target School</label>
+            <select id="feeCorrectionSchool" class="select-input" required>
+              <option value="">-- Choose School --</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Adjustment Amount (₹)</label>
+              <input type="number" id="feeCorrectionAmount" class="input-field" placeholder="e.g. 2500" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Adjustment Type</label>
+              <select id="feeCorrectionType" class="select-input">
+                <option value="CONCESSION">Scholarship / Concession</option>
+                <option value="WAIVER">Administrative Fee Waiver</option>
+                <option value="CORRECTION">Billing Correction</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Audit Justification / Note *</label>
+            <textarea id="feeCorrectionReason" class="input-field textarea-field" rows="3" placeholder="Enter mandatory administrative reasoning..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer sticky-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('feeCorrectionModal')">Cancel</button>
+          <button type="submit" id="feeCorrectionSubmitBtn" class="btn btn-primary">
+            <i class="fa-solid fa-check"></i> Apply Adjustment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. Manual Attendance Override Modal -->
+  <div id="attendanceOverrideModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-clock text-primary"></i> Manual Faculty Attendance Override</h3>
+        <button class="btn-close" onclick="closeModal('attendanceOverrideModal')">&times;</button>
+      </div>
+      <form id="attendanceOverrideForm" onsubmit="submitAttendanceOverride(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>School Institution</label>
+            <select id="overrideSchool" class="select-input" required>
+              <option value="">-- Choose School --</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Date</label>
+              <input type="date" id="overrideDate" class="input-field" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Status Override</label>
+              <select id="overrideStatus" class="select-input">
+                <option value="PRESENT">PRESENT</option>
+                <option value="LATE">LATE</option>
+                <option value="HALF_DAY">HALF DAY</option>
+                <option value="ON_DUTY">ON OFFICIAL DUTY</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Audit Justification Reason *</label>
+            <input type="text" id="overrideReason" class="input-field" placeholder="e.g. Biometric terminal offline during morning punch" required>
+          </div>
+        </div>
+        <div class="modal-footer sticky-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('attendanceOverrideModal')">Cancel</button>
+          <button type="submit" id="attendanceOverrideSubmitBtn" class="btn btn-primary">
+            <i class="fa-solid fa-check"></i> Commit Attendance Override
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. Register Biometric Device Modal -->
+  <div id="createBiometricModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-fingerprint text-primary"></i> Register Biometric Terminal</h3>
+        <button class="btn-close" onclick="closeModal('createBiometricModal')">&times;</button>
+      </div>
+      <form id="createBiometricForm" onsubmit="submitCreateBiometric(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>School Campus</label>
+            <select id="newBiometricSchool" class="select-input" required>
+              <option value="">-- Choose School --</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>Device Name</label>
+              <input type="text" id="newBiometricName" class="input-field" placeholder="e.g. Main Gate Terminal A1" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Device ID</label>
+              <input type="text" id="newBiometricId" class="input-field" placeholder="e.g. BIO-MUM-01" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Location / Gate</label>
+            <input type="text" id="newBiometricLocation" class="input-field" placeholder="e.g. Staff Room Entry - Block B">
+          </div>
+        </div>
+        <div class="modal-footer sticky-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('createBiometricModal')">Cancel</button>
+          <button type="submit" id="createBiometricSubmitBtn" class="btn btn-primary">
+            <i class="fa-solid fa-plug"></i> Register Terminal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 7. Create Bus Modal -->
+  <div id="createBusModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-bus text-primary"></i> Add Fleet Vehicle & GPS</h3>
+        <button class="btn-close" onclick="closeModal('createBusModal')">&times;</button>
+      </div>
+      <form id="createBusForm" onsubmit="submitCreateBus(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>School Campus</label>
+            <select id="newBusSchool" class="select-input" required>
+              <option value="">-- Choose School --</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Bus Number / Name</label>
+              <input type="text" id="newBusNumber" class="input-field" placeholder="e.g. Bus 12 - Route A" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Registration Number</label>
+              <input type="text" id="newBusRegNo" class="input-field" placeholder="e.g. DL-01-AB-1234" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Driver Name</label>
+              <input type="text" id="newBusDriver" class="input-field" placeholder="e.g. Ramesh Singh">
+            </div>
+            <div class="form-group flex-1">
+              <label>Driver Contact</label>
+              <input type="tel" id="newBusDriverPhone" class="input-field" placeholder="+91 9876543210">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer sticky-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('createBusModal')">Cancel</button>
+          <button type="submit" id="createBusSubmitBtn" class="btn btn-primary">
+            <i class="fa-solid fa-plus"></i> Add Vehicle to Fleet
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Floating Toast Notification System -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Main JavaScript Controller -->
+  <script src="/super-admin/app.js"></script>
+</body>
+</html>

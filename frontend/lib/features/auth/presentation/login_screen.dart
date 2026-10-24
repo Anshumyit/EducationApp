@@ -160,6 +160,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         runSpacing: 8,
                         children: [
                           _buildRoleChip(
+                            label: '⚡ Super Admin',
+                            color: AppColors.purple,
+                            onTap: () => _fillDemo('superadmin@scholarcloud.com', 'Password@123'),
+                          ),
+                          _buildRoleChip(
                             label: '👑 Admin',
                             color: AppColors.primary,
                             onTap: () => _fillDemo('admin@school.com', 'Password@123'),

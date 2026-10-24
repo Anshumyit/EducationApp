@@ -288,6 +288,15 @@ const loginUser = asyncHandler(async (req, res) => {
     }
   }
 
+  if (user.isSuspended) {
+    throw new ApiError(403, 'Account Suspended: Your access has been revoked or suspended by Super Admin. Please contact platform administration.');
+  }
+
+  // Update login metrics
+  user.lastLoginAt = new Date();
+  user.failedLoginAttempts = 0;
+  await user.save({ validateBeforeSave: false });
+
   const token = generateToken({ id: user._id, role: user.role });
 
   return res.status(200).json(
@@ -303,6 +312,10 @@ const loginUser = asyncHandler(async (req, res) => {
           role: user.role,
           status: user.status,
           avatar: user.avatar,
+          schoolId: user.schoolId,
+          permissions: user.permissions,
+          employeeId: user.employeeId,
+          designation: user.designation,
           subjects: user.subjects,
           isClassTeacher: user.isClassTeacher,
           assignedClass: user.assignedClass,
@@ -313,6 +326,7 @@ const loginUser = asyncHandler(async (req, res) => {
     )
   );
 });
+
 
 /**
  * Get current authenticated user details

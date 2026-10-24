@@ -17,11 +17,26 @@ const studentSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    schoolId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'School',
+      default: null,
+    },
+
+    enrolmentDate: {
+      type: Date,
+      default: Date.now,
+    },
+    previousSchool: {
+      type: String,
+      default: '',
+    },
     classId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ClassRoom',
       required: true,
     },
+
     parentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

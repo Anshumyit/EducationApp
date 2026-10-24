@@ -23,6 +23,21 @@ const attendanceRecordSchema = new mongoose.Schema(
 
 const attendanceSchema = new mongoose.Schema(
   {
+    schoolId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'School',
+      default: null,
+    },
+    attendanceType: {
+      type: String,
+      enum: ['STUDENT', 'FACULTY'],
+      default: 'STUDENT',
+    },
+    teacherId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     date: {
       type: String, // 'YYYY-MM-DD' for simple date queries
       required: true,
@@ -30,12 +45,37 @@ const attendanceSchema = new mongoose.Schema(
     classId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ClassRoom',
-      required: true,
+      default: null,
     },
     markedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: null,
+    },
+    gpsPunch: {
+      latitude: { type: Number, default: null },
+      longitude: { type: Number, default: null },
+      distanceMeters: { type: Number, default: 0 },
+      isWithinGeofence: { type: Boolean, default: true },
+      punchInTime: { type: Date, default: null },
+      punchOutTime: { type: Date, default: null },
+    },
+    biometricPunchId: {
+      type: String,
+      default: '',
+    },
+    isManualOverride: {
+      type: Boolean,
+      default: false,
+    },
+    overrideReason: {
+      type: String,
+      default: '',
+    },
+    overriddenBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
     records: [attendanceRecordSchema],
   },
@@ -44,7 +84,9 @@ const attendanceSchema = new mongoose.Schema(
   }
 );
 
-attendanceSchema.index({ date: 1, classId: 1 }, { unique: true });
+attendanceSchema.index({ date: 1, classId: 1 });
+attendanceSchema.index({ date: 1, teacherId: 1 });
+
 
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 module.exports = Attendance;

@@ -2,7 +2,13 @@ const mongoose = require('mongoose');
 
 const salarySlipSchema = new mongoose.Schema(
   {
+    schoolId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'School',
+      default: null,
+    },
     teacherId: {
+
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,

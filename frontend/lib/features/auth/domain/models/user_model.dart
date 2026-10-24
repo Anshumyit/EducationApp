@@ -11,6 +11,8 @@ class UserModel {
   final bool isClassTeacher;
   final dynamic assignedClass;
   final String? address;
+  final dynamic schoolId;
+  final Map<String, dynamic>? permissions;
 
   UserModel({
     required this.id,
@@ -25,6 +27,8 @@ class UserModel {
     this.isClassTeacher = false,
     this.assignedClass,
     this.address,
+    this.schoolId,
+    this.permissions,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -43,6 +47,8 @@ class UserModel {
       isClassTeacher: json['isClassTeacher'] ?? false,
       assignedClass: json['assignedClass'],
       address: json['address'],
+      schoolId: json['schoolId'],
+      permissions: json['permissions'] is Map ? Map<String, dynamic>.from(json['permissions']) : null,
     );
   }
 
@@ -60,9 +66,12 @@ class UserModel {
       'isClassTeacher': isClassTeacher,
       'assignedClass': assignedClass,
       'address': address,
+      'schoolId': schoolId,
+      'permissions': permissions,
     };
   }
 
+  bool get isSuperAdmin => role == 'SUPER_ADMIN';
   bool get isAdmin => role == 'ADMIN';
   bool get isTeacher => role == 'TEACHER';
   bool get isParent => role == 'PARENT';

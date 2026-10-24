@@ -30,6 +30,11 @@ const paymentHistorySchema = new mongoose.Schema(
 
 const feeRecordSchema = new mongoose.Schema(
   {
+    schoolId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'School',
+      default: null,
+    },
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Student',
@@ -40,6 +45,21 @@ const feeRecordSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    reconciliationStatus: {
+      type: String,
+      enum: ['RECONCILED', 'PENDING', 'FAILED'],
+      default: 'RECONCILED',
+    },
+    correctionsHistory: [
+      {
+        previousAmount: Number,
+        adjustedAmount: Number,
+        reason: String,
+        adjustedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        adjustedAt: { type: Date, default: Date.now },
+      },
+    ],
+
     title: {
       type: String,
       required: true,

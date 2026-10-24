@@ -1,6 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('../models/user.model');
+const School = require('../models/school.model');
 const ClassRoom = require('../models/classroom.model');
 const Student = require('../models/student.model');
 const Attendance = require('../models/attendance.model');
@@ -12,16 +13,22 @@ const SalarySlip = require('../models/salarySlip.model');
 const Holiday = require('../models/holiday.model');
 const Notification = require('../models/notification.model');
 const SchoolSetting = require('../models/schoolSetting.model');
+const BiometricDevice = require('../models/biometricDevice.model');
+const BusTracker = require('../models/busTracker.model');
+const AuditLog = require('../models/auditLog.model');
+const PlatformSetting = require('../models/platformSetting.model');
+
 const { ROLES } = require('../constants/roles');
-const { USER_STATUS, ATTENDANCE_STATUS, EXAM_TYPES, LEAVE_STATUS } = require('../constants/status');
+const { USER_STATUS, SCHOOL_STATUS, BUS_STATUS, BIOMETRIC_STATUS, ATTENDANCE_STATUS, EXAM_TYPES, LEAVE_STATUS, FEE_STATUS } = require('../constants/status');
 
 const seed = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/school_management_db');
-    console.log('[Seed] Connected to database');
+    console.log('[Seed] Connected to database successfully');
 
-    // Clean existing records
+    // Clean existing collections
     await Promise.all([
+      School.deleteMany({}),
       User.deleteMany({}),
       ClassRoom.deleteMany({}),
       Student.deleteMany({}),
@@ -34,23 +41,237 @@ const seed = async () => {
       Holiday.deleteMany({}),
       Notification.deleteMany({}),
       SchoolSetting.deleteMany({}),
+      BiometricDevice.deleteMany({}),
+      BusTracker.deleteMany({}),
+      AuditLog.deleteMany({}),
+      PlatformSetting.deleteMany({}),
     ]);
-    console.log('[Seed] Existing collections cleaned');
+    console.log('[Seed] Cleaned existing collections');
 
-    // 1. Create Admin
-    const admin = await User.create({
-      name: 'Dr. Vivek Saxena (Admin)',
+    // 1. Create Platform Setting
+    const platformSetting = await PlatformSetting.create({
+      platformName: 'ScholarCloud Unified Multi-School Platform',
+      systemVersion: '3.4.0-Enterprise',
+      maintenanceMode: false,
+      defaultAcademicYear: '2026-2027',
+      backupRetentionDays: 30,
+      lastBackupAt: new Date(Date.now() - 3600000 * 4), // 4 hours ago
+      lastBackupSizeMB: 348.6,
+      failedLoginThreshold: 5,
+    });
+
+    // 2. Create Super Admin User
+    const superAdmin = await User.create({
+      name: 'Dr. Amitabh Sen (Chief Super Admin)',
+      email: 'superadmin@scholarcloud.com',
+      phone: '9999988888',
+      password: 'Password@123',
+      role: ROLES.SUPER_ADMIN,
+      status: USER_STATUS.APPROVED,
+      isOtpVerified: true,
+      designation: 'Director of Platform Operations',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      permissions: {
+        canView: true,
+        canCreate: true,
+        canEdit: true,
+        canDelete: true,
+        canApprove: true,
+        canPublish: true,
+        canExport: true,
+      },
+    });
+
+    // 3. Create Multiple Schools
+    // School 1: St. Xavier International Academy (Active)
+    const schoolXavier = await School.create({
+      name: 'St. Xavier International Academy',
+      code: 'SXIS-MUM-01',
+      affiliationCode: 'CBSE-MAH-2026-9812',
+      status: SCHOOL_STATUS.ACTIVE,
+      contactEmail: 'admin@school.com',
+      contactPhone: '+91 98765 43210',
+      address: 'Plot 14, Institutional Area, Sector 62',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      principalName: 'Dr. Vivek Saxena',
+      logo: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&w=200&q=80',
+      currentAcademicYear: '2026-2027',
+      geofence: { latitude: 19.0760, longitude: 72.8777, radiusMeters: 300 },
+      limits: { maxStudents: 1500, maxTeachers: 120, maxStaff: 60, storageLimitMB: 15360, usedStorageMB: 310 },
+      modules: {
+        busTracking: true,
+        biometricAttendance: true,
+        feeManagement: true,
+        examResults: true,
+        studentAdmission: true,
+        leaveManagement: true,
+        libraryModule: true,
+        dailySyllabus: true,
+      },
+    });
+
+    // School 2: Delhi Public Academy (Active)
+    const schoolDPA = await School.create({
+      name: 'Delhi Public Academy',
+      code: 'DPA-DEL-02',
+      affiliationCode: 'CBSE-DEL-2025-4120',
+      status: SCHOOL_STATUS.ACTIVE,
+      contactEmail: 'admin.dpa@school.com',
+      contactPhone: '+91 98111 22334',
+      address: 'Vasant Kunj Sector C, Institutional Road',
+      city: 'New Delhi',
+      state: 'Delhi',
+      principalName: 'Mrs. Sunita Kaul',
+      logo: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=200&q=80',
+      currentAcademicYear: '2026-2027',
+      geofence: { latitude: 28.5245, longitude: 77.1585, radiusMeters: 350 },
+      limits: { maxStudents: 2000, maxTeachers: 150, maxStaff: 80, storageLimitMB: 20480, usedStorageMB: 420 },
+      modules: {
+        busTracking: true,
+        biometricAttendance: true,
+        feeManagement: true,
+        examResults: true,
+        studentAdmission: true,
+        leaveManagement: true,
+        libraryModule: true,
+        dailySyllabus: true,
+      },
+    });
+
+    // School 3: Greenwood Global High (Pending Approval)
+    const schoolGreenwood = await School.create({
+      name: 'Greenwood Global High',
+      code: 'GGH-BLR-03',
+      affiliationCode: 'ICSE-KAR-2026-1189',
+      status: SCHOOL_STATUS.PENDING,
+      contactEmail: 'admin.greenwood@school.com',
+      contactPhone: '+91 99000 55443',
+      address: 'Outer Ring Road, Marathahalli',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      principalName: 'Mr. Arvind Swamy',
+      logo: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=200&q=80',
+      currentAcademicYear: '2026-2027',
+      geofence: { latitude: 12.9716, longitude: 77.5946, radiusMeters: 250 },
+      limits: { maxStudents: 800, maxTeachers: 60, maxStaff: 30, storageLimitMB: 8192, usedStorageMB: 50 },
+      modules: {
+        busTracking: true,
+        biometricAttendance: true,
+        feeManagement: true,
+        examResults: true,
+        studentAdmission: true,
+        leaveManagement: true,
+        libraryModule: false,
+        dailySyllabus: true,
+      },
+    });
+
+    // School 4: Heritage Cambridge School (Suspended)
+    const schoolHeritage = await School.create({
+      name: 'Heritage Cambridge School',
+      code: 'HCS-KOL-04',
+      affiliationCode: 'WBCSE-WB-2024-5541',
+      status: SCHOOL_STATUS.SUSPENDED,
+      contactEmail: 'principal.heritage@school.com',
+      contactPhone: '+91 98300 11223',
+      address: 'Salt Lake Sector 5, Salt Lake Bypass',
+      city: 'Kolkata',
+      state: 'West Bengal',
+      principalName: 'Dr. Debabrata Roy',
+      logo: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=200&q=80',
+      currentAcademicYear: '2026-2027',
+      geofence: { latitude: 22.5726, longitude: 88.3639, radiusMeters: 300 },
+      limits: { maxStudents: 600, maxTeachers: 45, maxStaff: 20, storageLimitMB: 5120, usedStorageMB: 90 },
+      modules: {
+        busTracking: false,
+        biometricAttendance: false,
+        feeManagement: true,
+        examResults: false,
+        studentAdmission: false,
+        leaveManagement: true,
+        libraryModule: false,
+        dailySyllabus: false,
+      },
+    });
+
+    console.log('[Seed] 4 Multi-tenant Schools created');
+
+    // 4. Create School Admins
+    // Admin for St. Xavier
+    const adminXavier = await User.create({
+      name: 'Dr. Vivek Saxena (School Admin)',
       email: 'admin@school.com',
       phone: '9876543210',
       password: 'Password@123',
       role: ROLES.ADMIN,
+      schoolId: schoolXavier._id,
       status: USER_STATUS.APPROVED,
       isOtpVerified: true,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      designation: 'Principal & Head of School',
+      employeeId: 'ADM-SXIS-001',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
+      permissions: {
+        canView: true,
+        canCreate: true,
+        canEdit: true,
+        canDelete: false,
+        canApprove: true,
+        canPublish: true,
+        canExport: true,
+      },
     });
 
-    // 2. Create Classrooms
+    // Admin for Delhi Public Academy
+    const adminDPA = await User.create({
+      name: 'Mrs. Sunita Kaul (School Admin)',
+      email: 'admin.dpa@school.com',
+      phone: '9811122334',
+      password: 'Password@123',
+      role: ROLES.ADMIN,
+      schoolId: schoolDPA._id,
+      status: USER_STATUS.APPROVED,
+      isOtpVerified: true,
+      designation: 'Vice Principal & Admin Incharge',
+      employeeId: 'ADM-DPA-002',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+      permissions: {
+        canView: true,
+        canCreate: true,
+        canEdit: true,
+        canDelete: false,
+        canApprove: true,
+        canPublish: true,
+        canExport: true,
+      },
+    });
+
+    // Pending Admin for Greenwood Global
+    const adminGreenwood = await User.create({
+      name: 'Mr. Arvind Swamy (Applicant)',
+      email: 'admin.greenwood@school.com',
+      phone: '9900055443',
+      password: 'Password@123',
+      role: ROLES.ADMIN,
+      schoolId: schoolGreenwood._id,
+      status: USER_STATUS.PENDING,
+      isOtpVerified: true,
+      designation: 'Campus Director',
+      employeeId: 'ADM-GGH-003',
+      permissions: {
+        canView: true,
+        canCreate: false,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canPublish: false,
+        canExport: false,
+      },
+    });
+
+    // 5. Create Classrooms for St. Xavier & DPA
     const class10A = await ClassRoom.create({
+      schoolId: schoolXavier._id,
       name: 'Class 10',
       section: 'A',
       roomNumber: 'Room 204',
@@ -58,434 +279,464 @@ const seed = async () => {
     });
 
     const class10B = await ClassRoom.create({
+      schoolId: schoolXavier._id,
       name: 'Class 10',
       section: 'B',
       roomNumber: 'Room 205',
       capacity: 40,
     });
 
-    // 3. Create Teachers
-    // Teacher 1: Approved Class Teacher for 10-A
+    const class9A = await ClassRoom.create({
+      schoolId: schoolDPA._id,
+      name: 'Class 9',
+      section: 'A',
+      roomNumber: 'Block C - 101',
+      capacity: 45,
+    });
+
+    // 6. Create Teachers
     const teacherRahul = await User.create({
       name: 'Rahul Sharma',
       email: 'teacher.rahul@school.com',
       phone: '9876543211',
       password: 'Password@123',
       role: ROLES.TEACHER,
+      schoolId: schoolXavier._id,
       status: USER_STATUS.APPROVED,
       isOtpVerified: true,
       subjects: ['Mathematics', 'Physics'],
       qualification: 'M.Sc. Mathematics, B.Ed.',
       salary: 58000,
+      designation: 'Senior PGT Mathematics',
+      employeeId: 'TCH-SXIS-101',
       isClassTeacher: true,
       assignedClass: class10A._id,
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
     });
-
-    // Link ClassRoom 10A to Rahul
     class10A.classTeacher = teacherRahul._id;
     await class10A.save();
 
-    // Teacher 2: Approved Subject Teacher
     const teacherPriya = await User.create({
       name: 'Priya Mukherjee',
       email: 'teacher.priya@school.com',
       phone: '9876543212',
       password: 'Password@123',
       role: ROLES.TEACHER,
+      schoolId: schoolXavier._id,
       status: USER_STATUS.APPROVED,
       isOtpVerified: true,
       subjects: ['English Literature', 'Social Studies'],
       qualification: 'M.A. English, B.Ed.',
       salary: 52000,
-      isClassTeacher: false,
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+      designation: 'TGT English',
+      employeeId: 'TCH-SXIS-102',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
     });
 
-    // Teacher 3: Pending Teacher (Waiting for Admin approval)
     const teacherAmit = await User.create({
-      name: 'Amit Kumar Verma',
+      name: 'Amit Patel',
       email: 'teacher.amit@school.com',
       phone: '9876543213',
       password: 'Password@123',
       role: ROLES.TEACHER,
+      schoolId: schoolXavier._id,
       status: USER_STATUS.PENDING,
       isOtpVerified: true,
-      subjects: ['Chemistry', 'Biology'],
-      qualification: 'M.Sc. Chemistry',
-      salary: 50000,
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+      subjects: ['Computer Science', 'Artificial Intelligence'],
+      qualification: 'B.Tech CSE, MCA',
+      salary: 60000,
+      designation: 'PGT Informatics',
+      employeeId: 'TCH-SXIS-103',
     });
 
-    // 4. Create Parents
-    // Parent 1: Approved Parent
+    // 7. Create Parents & Students
     const parentRajesh = await User.create({
       name: 'Rajesh Sharma',
       email: 'parent.rajesh@gmail.com',
       phone: '9876543214',
       password: 'Password@123',
       role: ROLES.PARENT,
+      schoolId: schoolXavier._id,
       status: USER_STATUS.APPROVED,
       isOtpVerified: true,
-      address: 'House #42, Green Park Avenue, Delhi',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
+      address: 'Flat 402, Royal Palms, Sector 62, Mumbai',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
     });
 
-    // Parent 2: Pending Parent (Waiting for Admin approval)
+    const studentAarav = await Student.create({
+      name: 'Aarav Sharma',
+      rollNumber: 1,
+      admissionNumber: 'SCH-2026-001',
+      schoolId: schoolXavier._id,
+      classId: class10A._id,
+      parentId: parentRajesh._id,
+      dateOfBirth: new Date('2011-04-12'),
+      gender: 'MALE',
+      bloodGroup: 'B+',
+      address: 'Flat 402, Royal Palms, Sector 62, Mumbai',
+      emergencyContact: '+91 98765 43214',
+      photo: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=150&q=80',
+      status: 'ACTIVE',
+      academicSession: '2026-2027',
+    });
+    parentRajesh.children = [studentAarav._id];
+    await parentRajesh.save();
+
     const parentVikram = await User.create({
       name: 'Vikram Malhotra',
       email: 'parent.vikram@gmail.com',
       phone: '9876543215',
       password: 'Password@123',
       role: ROLES.PARENT,
+      schoolId: schoolXavier._id,
       status: USER_STATUS.PENDING,
       isOtpVerified: true,
-      address: 'Flat 301, Silver Crest Tower, Delhi',
-      avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=200&q=80',
-    });
-
-    // 5. Create Students for Class 10-A
-    const studentAarav = await Student.create({
-      name: 'Aarav Sharma',
-      rollNumber: 1,
-      admissionNumber: 'ADM-2024-001',
-      classId: class10A._id,
-      parentId: parentRajesh._id,
-      dateOfBirth: new Date('2011-04-12'),
-      gender: 'MALE',
-      bloodGroup: 'B+',
-      address: 'House #42, Green Park Avenue, Delhi',
-      emergencyContact: '9876543214',
-      photo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80',
-    });
-
-    const studentAnanya = await Student.create({
-      name: 'Ananya Patel',
-      rollNumber: 2,
-      admissionNumber: 'ADM-2024-002',
-      classId: class10A._id,
-      parentId: parentRajesh._id, // linked for demo
-      dateOfBirth: new Date('2011-08-22'),
-      gender: 'FEMALE',
-      bloodGroup: 'O+',
-      address: '77 Garden City, Delhi',
-      emergencyContact: '9876543214',
-      photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
+      address: 'Villa 12, Palm Meadows, Mumbai',
     });
 
     const studentRohan = await Student.create({
-      name: 'Rohan Gupta',
-      rollNumber: 3,
-      admissionNumber: 'ADM-2024-003',
+      name: 'Rohan Malhotra',
+      rollNumber: 2,
+      admissionNumber: 'SCH-2026-002',
+      schoolId: schoolXavier._id,
       classId: class10A._id,
-      parentId: parentRajesh._id,
-      dateOfBirth: new Date('2011-01-15'),
+      parentId: parentVikram._id,
+      dateOfBirth: new Date('2011-07-25'),
       gender: 'MALE',
-      bloodGroup: 'A+',
-      address: '12 Metro Colony, Delhi',
-      emergencyContact: '9876543214',
-      photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
+      bloodGroup: 'O+',
+      address: 'Villa 12, Palm Meadows, Mumbai',
+      emergencyContact: '+91 98765 43215',
+      status: 'ACTIVE',
     });
+    parentVikram.children = [studentRohan._id];
+    await parentVikram.save();
 
-    const studentSneha = await Student.create({
-      name: 'Sneha Verma',
-      rollNumber: 4,
-      admissionNumber: 'ADM-2024-004',
-      classId: class10A._id,
-      parentId: parentRajesh._id,
-      dateOfBirth: new Date('2011-11-05'),
-      gender: 'FEMALE',
-      bloodGroup: 'AB+',
-      address: '94 Lotus Boulevard, Delhi',
-      emergencyContact: '9876543214',
-      photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80',
-    });
-
-    // Update parent's children array
-    parentRajesh.children = [studentAarav._id, studentAnanya._id];
-    await parentRajesh.save();
-
-    // 6. Create Daily Attendance for current date
+    // 8. Create Student Attendance & Faculty Attendance with GPS
     const todayStr = new Date().toISOString().split('T')[0];
     await Attendance.create({
+      schoolId: schoolXavier._id,
       date: todayStr,
+      attendanceType: 'STUDENT',
       classId: class10A._id,
       markedBy: teacherRahul._id,
       records: [
         { studentId: studentAarav._id, status: ATTENDANCE_STATUS.PRESENT, remarks: 'On time' },
-        { studentId: studentAnanya._id, status: ATTENDANCE_STATUS.PRESENT, remarks: 'On time' },
-        { studentId: studentRohan._id, status: ATTENDANCE_STATUS.ABSENT, remarks: 'Medical excuse' },
-        { studentId: studentSneha._id, status: ATTENDANCE_STATUS.LATE, remarks: 'Bus delayed' },
+        { studentId: studentRohan._id, status: ATTENDANCE_STATUS.PRESENT, remarks: 'On time' },
       ],
     });
 
-    // Past attendance days for monthly reports
-    const dates = ['2026-10-01', '2026-10-02', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09'];
-    for (const d of dates) {
-      await Attendance.create({
-        date: d,
-        classId: class10A._id,
-        markedBy: teacherRahul._id,
-        records: [
-          { studentId: studentAarav._id, status: ATTENDANCE_STATUS.PRESENT },
-          { studentId: studentAnanya._id, status: ATTENDANCE_STATUS.PRESENT },
-          { studentId: studentRohan._id, status: d === '2026-10-05' ? ATTENDANCE_STATUS.ABSENT : ATTENDANCE_STATUS.PRESENT },
-          { studentId: studentSneha._id, status: ATTENDANCE_STATUS.PRESENT },
-        ],
-      });
-    }
-
-    // 7. Create Exam Results (Weekly, Monthly, Half-Yearly, Annual)
-    // Weekly Test
-    await ExamResult.create({
-      studentId: studentAarav._id,
-      classId: class10A._id,
-      examType: EXAM_TYPES.WEEKLY,
-      examTitle: 'Weekly Test - Unit 1',
-      academicYear: '2026-2027',
-      subjects: [
-        { subjectName: 'Mathematics', maxMarks: 25, marksObtained: 24, grade: 'A+' },
-        { subjectName: 'Physics', maxMarks: 25, marksObtained: 22, grade: 'A' },
-        { subjectName: 'English', maxMarks: 25, marksObtained: 23, grade: 'A' },
-        { subjectName: 'Social Science', maxMarks: 25, marksObtained: 21, grade: 'B+' },
-      ],
-      enteredBy: teacherRahul._id,
+    // Faculty Attendance for Rahul Sharma with verified GPS Coordinates
+    await Attendance.create({
+      schoolId: schoolXavier._id,
+      date: todayStr,
+      attendanceType: 'FACULTY',
+      teacherId: teacherRahul._id,
+      markedBy: adminXavier._id,
+      gpsPunch: {
+        latitude: 19.0762,
+        longitude: 72.8779,
+        distanceMeters: 42,
+        isWithinGeofence: true,
+        punchInTime: new Date(Date.now() - 3600000 * 5),
+        punchOutTime: null,
+      },
+      biometricPunchId: 'BIO-PUNCH-8841',
+      records: [],
     });
 
-    // Monthly Exam
-    await ExamResult.create({
-      studentId: studentAarav._id,
-      classId: class10A._id,
-      examType: EXAM_TYPES.MONTHLY,
-      examTitle: 'September Monthly Assessment',
-      academicYear: '2026-2027',
-      subjects: [
-        { subjectName: 'Mathematics', maxMarks: 100, marksObtained: 94, grade: 'A+' },
-        { subjectName: 'Physics', maxMarks: 100, marksObtained: 89, grade: 'A' },
-        { subjectName: 'English', maxMarks: 100, marksObtained: 86, grade: 'A' },
-        { subjectName: 'Social Science', maxMarks: 100, marksObtained: 91, grade: 'A+' },
+    // 9. Create Biometric Machines
+    await BiometricDevice.create({
+      schoolId: schoolXavier._id,
+      name: 'Main Gate Terminal 1',
+      deviceSerial: 'ZK-TECO-MB460-XAV01',
+      ipAddress: '192.168.1.101',
+      location: 'Administrative Block - Gate A',
+      status: BIOMETRIC_STATUS.ONLINE,
+      lastSyncAt: new Date(),
+      totalPunchesToday: 48,
+      failedSyncAlerts: 0,
+      syncLogs: [
+        { timestamp: new Date(Date.now() - 600000), recordsCount: 12, status: 'SUCCESS', notes: 'Automated 10-minute sync successful' },
+        { timestamp: new Date(Date.now() - 1200000), recordsCount: 36, status: 'SUCCESS', notes: 'Morning check-in batch synchronized' },
       ],
-      enteredBy: teacherRahul._id,
     });
 
-    // 6-Months (Half Yearly)
+    await BiometricDevice.create({
+      schoolId: schoolXavier._id,
+      name: 'Faculty Lounge Terminal 2',
+      deviceSerial: 'ESL-BIO-F200-XAV02',
+      ipAddress: '192.168.1.102',
+      location: 'Staff Room First Floor',
+      status: BIOMETRIC_STATUS.ONLINE,
+      lastSyncAt: new Date(Date.now() - 1800000),
+      totalPunchesToday: 24,
+      failedSyncAlerts: 0,
+      syncLogs: [
+        { timestamp: new Date(Date.now() - 1800000), recordsCount: 24, status: 'SUCCESS', notes: 'Faculty morning check-in sync complete' },
+      ],
+    });
+
+    await BiometricDevice.create({
+      schoolId: schoolDPA._id,
+      name: 'DPA Campus Central Scanner',
+      deviceSerial: 'ANVIZ-C2PRO-DPA01',
+      ipAddress: '192.168.2.55',
+      location: 'Principal Entrance Lobby',
+      status: BIOMETRIC_STATUS.SYNCING,
+      lastSyncAt: new Date(),
+      totalPunchesToday: 82,
+      failedSyncAlerts: 0,
+      syncLogs: [
+        { timestamp: new Date(), recordsCount: 15, status: 'SUCCESS', notes: 'Active stream sync ongoing' },
+      ],
+    });
+
+    await BiometricDevice.create({
+      schoolId: schoolHeritage._id,
+      name: 'Heritage Gateway Biometric',
+      deviceSerial: 'ZK-TECO-F18-HCS01',
+      ipAddress: '192.168.4.10',
+      location: 'West Gate Security Cabin',
+      status: BIOMETRIC_STATUS.OFFLINE,
+      lastSyncAt: new Date(Date.now() - 86400000 * 2),
+      totalPunchesToday: 0,
+      failedSyncAlerts: 4,
+      syncLogs: [
+        { timestamp: new Date(Date.now() - 86400000 * 2), recordsCount: 0, status: 'FAILED', notes: 'Connection timed out: Device unreachable on IP 192.168.4.10' },
+      ],
+    });
+
+    // 10. Create Bus Fleet with Live GPS Trackers & Expiry Alerts
+    await BusTracker.create({
+      schoolId: schoolXavier._id,
+      busNumber: 'MH-02-CB-4890',
+      routeName: 'Route 101: Andheri East to Campus',
+      driverName: 'Suresh Gaikwad',
+      driverPhone: '+91 98200 44332',
+      gpsDeviceId: 'GPS-TRK-7711',
+      status: BUS_STATUS.ACTIVE_TRIP,
+      tripType: 'MORNING_PICKUP',
+      capacity: 40,
+      assignedStudentsCount: 28,
+      currentLocation: {
+        latitude: 19.1136,
+        longitude: 72.8697,
+        speedKmH: 34,
+        heading: 145,
+        lastPingAt: new Date(),
+      },
+      stops: [
+        { stopName: 'Andheri Metro Station', scheduledTime: '07:15 AM', latitude: 19.1197, longitude: 72.8464, arrived: true, studentCount: 8 },
+        { stopName: 'Chakala Junction', scheduledTime: '07:30 AM', latitude: 19.1114, longitude: 72.8608, arrived: true, studentCount: 12 },
+        { stopName: 'MIDC Cross Road', scheduledTime: '07:45 AM', latitude: 19.1180, longitude: 72.8790, arrived: false, studentCount: 8 },
+        { stopName: 'St. Xavier Campus Gate', scheduledTime: '08:05 AM', latitude: 19.0760, longitude: 72.8777, arrived: false, studentCount: 0 },
+      ],
+      insuranceExpiryDate: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000),
+      fitnessExpiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
+      pollutionExpiryDate: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000), // EXPIRING IN 12 DAYS! Triggers alert
+    });
+
+    await BusTracker.create({
+      schoolId: schoolXavier._id,
+      busNumber: 'MH-02-CB-4891',
+      routeName: 'Route 102: Bandra West to Campus',
+      driverName: 'Ramesh Sawant',
+      driverPhone: '+91 98200 99887',
+      gpsDeviceId: 'GPS-TRK-7712',
+      status: BUS_STATUS.IDLE,
+      tripType: 'IDLE',
+      capacity: 35,
+      assignedStudentsCount: 22,
+      currentLocation: {
+        latitude: 19.0760,
+        longitude: 72.8777,
+        speedKmH: 0,
+        heading: 0,
+        lastPingAt: new Date(Date.now() - 15 * 60000),
+      },
+      insuranceExpiryDate: new Date(Date.now() + 200 * 24 * 60 * 60 * 1000),
+      fitnessExpiryDate: new Date(Date.now() + 250 * 24 * 60 * 60 * 1000),
+      pollutionExpiryDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+    });
+
+    await BusTracker.create({
+      schoolId: schoolDPA._id,
+      busNumber: 'DL-01-AB-1234',
+      routeName: 'DPA Route 1: Noida Sec 62 to Vasant Kunj',
+      driverName: 'Harpreet Singh',
+      driverPhone: '+91 98111 66554',
+      gpsDeviceId: 'GPS-TRK-8822',
+      status: BUS_STATUS.ACTIVE_TRIP,
+      tripType: 'MORNING_PICKUP',
+      capacity: 45,
+      assignedStudentsCount: 38,
+      currentLocation: {
+        latitude: 28.5670,
+        longitude: 77.2430,
+        speedKmH: 42,
+        heading: 210,
+        lastPingAt: new Date(),
+      },
+      stops: [
+        { stopName: 'Sector 62 Fortis', scheduledTime: '07:10 AM', latitude: 28.6200, longitude: 77.3600, arrived: true, studentCount: 15 },
+        { stopName: 'Lajpat Nagar Ring Road', scheduledTime: '07:35 AM', latitude: 28.5670, longitude: 77.2430, arrived: true, studentCount: 14 },
+        { stopName: 'AIIMS Flyover', scheduledTime: '07:48 AM', latitude: 28.5680, longitude: 77.2080, arrived: false, studentCount: 9 },
+        { stopName: 'DPA Campus Vasant Kunj', scheduledTime: '08:10 AM', latitude: 28.5245, longitude: 77.1585, arrived: false, studentCount: 0 },
+      ],
+      insuranceExpiryDate: new Date(Date.now() + 150 * 24 * 60 * 60 * 1000),
+      fitnessExpiryDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), // EXPIRING IN 6 DAYS! Urgent Alert
+      pollutionExpiryDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000),
+    });
+
+    // 11. Create Exam Results
     await ExamResult.create({
+      schoolId: schoolXavier._id,
       studentId: studentAarav._id,
       classId: class10A._id,
       examType: EXAM_TYPES.HALF_YEARLY,
-      examTitle: 'Mid-Term Examination (Half Yearly)',
+      examTitle: 'Half-Yearly Examination 2026',
       academicYear: '2026-2027',
-      subjects: [
-        { subjectName: 'Mathematics', maxMarks: 100, marksObtained: 95, grade: 'A+' },
-        { subjectName: 'Physics', maxMarks: 100, marksObtained: 91, grade: 'A+' },
-        { subjectName: 'English', maxMarks: 100, marksObtained: 88, grade: 'A' },
-        { subjectName: 'Social Science', maxMarks: 100, marksObtained: 90, grade: 'A+' },
-      ],
       enteredBy: teacherRahul._id,
+      approvalStatus: 'APPROVED',
+      isPublished: true,
+      subjects: [
+        { subjectName: 'Mathematics', maxMarks: 100, marksObtained: 94, grade: 'A+' },
+        { subjectName: 'Physics', maxMarks: 100, marksObtained: 89, grade: 'A' },
+        { subjectName: 'English Literature', maxMarks: 100, marksObtained: 86, grade: 'A' },
+      ],
     });
 
-    // 1-Year (Annual)
     await ExamResult.create({
-      studentId: studentAarav._id,
+      schoolId: schoolXavier._id,
+      studentId: studentRohan._id,
       classId: class10A._id,
-      examType: EXAM_TYPES.ANNUAL,
-      examTitle: 'Annual Board Assessment Final',
-      academicYear: '2025-2026',
-      subjects: [
-        { subjectName: 'Mathematics', maxMarks: 100, marksObtained: 96, grade: 'A+' },
-        { subjectName: 'Physics', maxMarks: 100, marksObtained: 94, grade: 'A+' },
-        { subjectName: 'English', maxMarks: 100, marksObtained: 90, grade: 'A+' },
-        { subjectName: 'Social Science', maxMarks: 100, marksObtained: 92, grade: 'A+' },
-      ],
-      enteredBy: teacherRahul._id,
-    });
-
-    // 8. Create Homework
-    await Homework.create({
-      title: 'Quadratic Equations Exercise 4.2',
-      description: 'Solve questions 1 through 10 from NCERT Textbook Chapter 4. Submit notebook on Monday.',
-      subject: 'Mathematics',
-      classId: class10A._id,
-      assignedDate: new Date(),
-      submissionDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
-      createdBy: teacherRahul._id,
-    });
-
-    await Homework.create({
-      title: 'Ray Optics Diagrams and Reflection Laws',
-      description: 'Draw ray diagrams for concave and convex mirrors with focal point specifications.',
-      subject: 'Physics',
-      classId: class10A._id,
-      assignedDate: new Date(),
-      submissionDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-      createdBy: teacherRahul._id,
-    });
-
-    // 9. Create Leave Request
-    await LeaveRequest.create({
-      studentId: studentAarav._id,
-      parentId: parentRajesh._id,
-      classId: class10A._id,
-      startDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-      endDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
-      reason: 'Attending cousin’s wedding ceremony in Jaipur with family.',
-      status: LEAVE_STATUS.PENDING,
-    });
-
-    // 10. Create Fee Records
-    await FeeRecord.create({
-      studentId: studentAarav._id,
-      parentId: parentRajesh._id,
-      title: 'Term 1 Tuition & Lab Fees',
+      examType: EXAM_TYPES.HALF_YEARLY,
+      examTitle: 'Half-Yearly Examination 2026',
       academicYear: '2026-2027',
-      totalAmount: 35000,
+      enteredBy: teacherRahul._id,
+      approvalStatus: 'PENDING_APPROVAL',
+      isPublished: false,
+      subjects: [
+        { subjectName: 'Mathematics', maxMarks: 100, marksObtained: 78, grade: 'B+' },
+        { subjectName: 'Physics', maxMarks: 100, marksObtained: 82, grade: 'A' },
+        { subjectName: 'English Literature', maxMarks: 100, marksObtained: 74, grade: 'B+' },
+      ],
+    });
+
+    // 12. Create Fee Records
+    await FeeRecord.create({
+      schoolId: schoolXavier._id,
+      studentId: studentAarav._id,
+      parentId: parentRajesh._id,
+      title: 'Term 1 Tuition & Composite Fee',
+      feeCategory: 'TUITION',
+      academicYear: '2026-2027',
+      totalAmount: 25000,
       paidAmount: 25000,
-      dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      dueDate: new Date('2026-08-30'),
+      status: FEE_STATUS.PAID,
+      reconciliationStatus: 'RECONCILED',
       payments: [
         {
           amount: 25000,
-          paymentDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+          paymentDate: new Date('2026-08-20'),
+          transactionId: 'TXN-UPI-99228811',
           method: 'UPI',
+          receiptNumber: 'REC-260820',
         },
       ],
     });
 
-    // 11. Create Salary Slip for Teacher Rahul
-    await SalarySlip.create({
-      teacherId: teacherRahul._id,
-      month: 'October',
-      year: 2026,
-      basicSalary: 45000,
-      hra: 9000,
-      da: 4000,
-      specialAllowance: 4000,
-      pfDeduction: 3500,
-      taxDeduction: 1500,
-      netSalary: 57000,
-      paymentStatus: 'PAID',
+    await FeeRecord.create({
+      schoolId: schoolXavier._id,
+      studentId: studentRohan._id,
+      parentId: parentVikram._id,
+      title: 'Term 1 Tuition & Composite Fee',
+      feeCategory: 'TUITION',
+      academicYear: '2026-2027',
+      totalAmount: 25000,
+      paidAmount: 10000,
+      dueDate: new Date('2026-10-15'),
+      status: FEE_STATUS.PARTIAL,
+      reconciliationStatus: 'RECONCILED',
+      payments: [
+        {
+          amount: 10000,
+          paymentDate: new Date('2026-10-10'),
+          transactionId: 'TXN-BANK-11002233',
+          method: 'BANK_TRANSFER',
+          receiptNumber: 'REC-261010',
+        },
+      ],
     });
 
-    // 12. Create Holidays
-    await Holiday.create([
-      {
-        title: 'Diwali Festival Holidays',
-        description: 'Deepawali festival celebrations break for students and staff.',
-        startDate: new Date('2026-10-28'),
-        endDate: new Date('2026-11-03'),
-        type: 'FESTIVAL',
-      },
-      {
-        title: 'Guru Nanak Jayanti',
-        description: 'National public holiday honoring Guru Nanak Dev Ji.',
-        startDate: new Date('2026-11-15'),
-        endDate: new Date('2026-11-15'),
-        type: 'FESTIVAL',
-      },
-      {
-        title: 'Winter Vacation',
-        description: 'Annual winter break for schools.',
-        startDate: new Date('2026-12-24'),
-        endDate: new Date('2027-01-05'),
-        type: 'VACATION',
-      },
-    ]);
+    // 13. Create Central Notifications
+    await Notification.create({
+      title: 'Central Safety Protocol & Bus GPS Compliance 2026',
+      message: 'All school principals and transport in-charges must ensure biometric synchronization and bus GPS trackers are verified before 30th October.',
+      type: 'BROADCAST',
+      targetRole: 'ADMIN',
+      schoolId: null, // Platform-wide
+      senderId: superAdmin._id,
+      deliveryStatus: 'SENT',
+    });
 
-    // 13. Create Initial Broadcast Notifications
-    await Notification.create([
-      {
-        title: 'Welcome to Academic Term 2026-2027 🎓',
-        message: 'School management system is live. Teachers, parents, and students can now track progress in real time.',
-        type: 'BROADCAST',
-        targetRole: 'ALL',
-        senderId: admin._id,
-      },
-      {
-        title: 'Parent-Teacher Meeting Scheduled 📅',
-        message: 'Term 1 PTM will be conducted on Saturday, Oct 24th from 9:00 AM to 1:00 PM in the school auditorium.',
-        type: 'BROADCAST',
-        targetRole: 'PARENTS',
-        senderId: admin._id,
-      },
-    ]);
+    await Notification.create({
+      title: 'Emergency Advisory: Heavy Rain Warning',
+      message: 'Meteorological department has issued an alert for coastal Maharashtra. St. Xavier campus afternoon bus departures rescheduled by 1 hour.',
+      type: 'EMERGENCY',
+      targetRole: 'ALL',
+      schoolId: schoolXavier._id,
+      isEmergency: true,
+      senderId: superAdmin._id,
+      deliveryStatus: 'SENT',
+    });
 
-    // 14. Create School Settings (Profile, Bus Fleet, Library Catalog)
-    await SchoolSetting.create({
-      schoolName: 'St. Xavier International Academy',
-      affiliationCode: 'CBSE-DEL-2026-9812',
-      address: 'Plot 14, Institutional Area, Sector 62, New Delhi',
-      phone: '+91 98765 43210',
-      email: 'admin@school.com',
-      currentSession: '2026-2027',
-      busRoutes: [
-        {
-          routeName: 'Route 1 - East Campus to Sector 62',
-          busNumber: 'DL-01-AB-1234',
-          driverName: 'Suraj Pal Singh',
-          driverPhone: '+91 98112 34567',
-          capacity: 40,
-          studentCount: 28,
-        },
-        {
-          routeName: 'Route 2 - South Extension Express',
-          busNumber: 'DL-01-CD-5678',
-          driverName: 'Manoj Kumar',
-          driverPhone: '+91 98223 45678',
-          capacity: 35,
-          studentCount: 22,
-        },
-      ],
-      libraryBooks: [
-        {
-          title: 'NCERT Exemplar Mathematics Class 10',
-          author: 'NCERT Council',
-          isbn: '978-81-7450-843-0',
-          category: 'Mathematics',
-          totalCopies: 25,
-          availableCopies: 18,
-        },
-        {
-          title: 'Concepts of Physics (Vol 1 & 2)',
-          author: 'Dr. H.C. Verma',
-          isbn: '978-81-7709-187-8',
-          category: 'Physics',
-          totalCopies: 20,
-          availableCopies: 14,
-        },
-        {
-          title: 'A Brief History of Time',
-          author: 'Stephen Hawking',
-          isbn: '978-05-5338-016-3',
-          category: 'Science & Astronomy',
-          totalCopies: 10,
-          availableCopies: 7,
-        },
-      ],
+    // 14. Create Initial Audit Logs
+    await AuditLog.create({
+      action: 'PLATFORM_INITIALIZATION',
+      performedBy: superAdmin._id,
+      performedByName: superAdmin.name,
+      targetEntity: 'PlatformSetting',
+      targetId: platformSetting._id,
+      schoolId: null,
+      schoolName: 'Platform Wide',
+      details: { version: '3.4.0-Enterprise', initializedSchools: 4 },
+      status: 'SUCCESS',
+    });
+
+    await AuditLog.create({
+      action: 'APPROVE_SCHOOL',
+      performedBy: superAdmin._id,
+      performedByName: superAdmin.name,
+      targetEntity: 'School',
+      targetId: schoolXavier._id,
+      schoolId: schoolXavier._id,
+      schoolName: schoolXavier.name,
+      details: { code: schoolXavier.code, status: 'ACTIVE' },
+      status: 'SUCCESS',
     });
 
     console.log('====================================================');
-    console.log('✅ DATABASE SEEDING COMPLETED SUCCESSFULLY!');
+    console.log('✅ COMPREHENSIVE MULTI-SCHOOL SEEDING COMPLETED!');
     console.log('----------------------------------------------------');
-    console.log('🔑 Credentials for instant testing:');
-    console.log('  👑 ADMIN:');
-    console.log('     Email: admin@school.com (or Phone: 9876543210)');
-    console.log('     Password: Password@123');
-    console.log('  👨‍🏫 CLASS TEACHER (Approved):');
-    console.log('     Email: teacher.rahul@school.com (or Phone: 9876543211)');
-    console.log('     Password: Password@123');
-    console.log('  ⏳ TEACHER (Pending Approval - for demo):');
-    console.log('     Email: teacher.amit@school.com');
-    console.log('     Password: Password@123');
-    console.log('  👨‍👩‍👧 PARENT (Approved):');
-    console.log('     Email: parent.rajesh@gmail.com (or Phone: 9876543214)');
-    console.log('     Password: Password@123');
-    console.log('  ⏳ PARENT (Pending Approval - for demo):');
-    console.log('     Email: parent.vikram@gmail.com');
-    console.log('     Password: Password@123');
+    console.log('👑 SUPER ADMIN CREDENTIALS:');
+    console.log('   Email:    superadmin@scholarcloud.com');
+    console.log('   Phone:    9999988888');
+    console.log('   Password: Password@123');
+    console.log('----------------------------------------------------');
+    console.log('🏫 SCHOOL ADMIN CREDENTIALS:');
+    console.log('   St. Xavier:    admin@school.com     / Password@123');
+    console.log('   Delhi Public:  admin.dpa@school.com / Password@123');
+    console.log('   Greenwood:     admin.greenwood@school.com (Pending)');
+    console.log('----------------------------------------------------');
+    console.log('👨‍🏫 CLASS TEACHER:  teacher.rahul@school.com / Password@123');
+    console.log('👨‍👩‍👧 PARENT:         parent.rajesh@gmail.com / Password@123');
     console.log('====================================================');
 
     process.exit(0);
   } catch (error) {
-    console.error('Seed Error:', error);
+    console.error('Fatal Seed Error:', error);
     process.exit(1);
   }
 };

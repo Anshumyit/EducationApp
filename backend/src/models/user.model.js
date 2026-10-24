@@ -85,7 +85,49 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // Multi-School & Super Admin fields
+    schoolId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'School',
+      default: null,
+    },
+    permissions: {
+      canView: { type: Boolean, default: true },
+      canCreate: { type: Boolean, default: true },
+      canEdit: { type: Boolean, default: true },
+      canDelete: { type: Boolean, default: false },
+      canApprove: { type: Boolean, default: true },
+      canPublish: { type: Boolean, default: true },
+      canExport: { type: Boolean, default: true },
+    },
+    employeeId: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    designation: {
+      type: String,
+      trim: true,
+      default: 'Faculty Member',
+    },
+    joiningDate: {
+      type: Date,
+      default: Date.now,
+    },
+    isSuspended: {
+      type: Boolean,
+      default: false,
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
+
   {
     timestamps: true,
   }

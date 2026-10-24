@@ -118,5 +118,48 @@ class ApiConstants {
 
   // Notifications
   static const String myNotifications = '/notifications/my';
+
+  // Super Admin Endpoints
+  static const String superAdminDashboard = '/super-admin/dashboard/stats';
+  static const String superAdminSchools = '/super-admin/schools';
+  static String superAdminSchool(String id) => '/super-admin/schools/$id';
+  static String superAdminSchoolStatus(String id) => '/super-admin/schools/$id/status';
+  static String superAdminSchoolModules(String id) => '/super-admin/schools/$id/modules';
+  static String superAdminSchoolLimits(String id) => '/super-admin/schools/$id/limits';
+  static String superAdminSchoolLimitsUsage(String id) => '/super-admin/schools/$id/limits-usage';
+
+  static const String superAdminAdmins = '/super-admin/admins';
+  static String superAdminAdminStatus(String id) => '/super-admin/admins/$id/status';
+  static String superAdminAdminPermissions(String id) => '/super-admin/admins/$id/permissions';
+  static String superAdminAdminAuditLogs(String id) => '/super-admin/admins/$id/audit-logs';
+
+  static const String superAdminStudents = '/super-admin/students';
+  static const String superAdminAdmissionStats = '/super-admin/students/admissions-stats';
+  static const String superAdminStaff = '/super-admin/staff';
+  static const String superAdminDuplicateStaff = '/super-admin/staff/duplicates';
+
+  static const String superAdminBiometricDevices = '/super-admin/biometric/devices';
+  static String superAdminSyncBiometric(String id) => '/super-admin/biometric/devices/$id/sync';
+  static const String superAdminFacultyAttendance = '/super-admin/biometric/faculty-attendance';
+  static const String superAdminAttendanceOverride = '/super-admin/biometric/override';
+
+  static const String superAdminBuses = '/super-admin/buses';
+  static String superAdminSimulateBus(String id) => '/super-admin/buses/$id/simulate-location';
+  static const String superAdminBusAlerts = '/super-admin/buses/alerts';
+
+  static const String superAdminExams = '/super-admin/exams';
+  static String superAdminPublishExam(String id) => '/super-admin/exams/$id/publish';
+  static String superAdminCorrectExam(String id) => '/super-admin/exams/$id/correct';
+
+  static const String superAdminFinancials = '/super-admin/financials/overview';
+  static const String superAdminFeeCorrection = '/super-admin/financials/fee-correction';
+
+  static const String superAdminNotificationsBroadcast = '/super-admin/notifications/broadcast';
+  static const String superAdminNotificationsHistory = '/super-admin/notifications/history';
+  static String superAdminRetryNotification(String id) => '/super-admin/notifications/$id/retry';
+
+  static const String superAdminSettings = '/super-admin/settings';
+  static const String superAdminSecurityAuditLogs = '/super-admin/security/audit-logs';
+  static const String superAdminBackup = '/super-admin/security/backup-now';
 }
 

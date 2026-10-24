@@ -2,7 +2,13 @@ const mongoose = require('mongoose');
 
 const classroomSchema = new mongoose.Schema(
   {
+    schoolId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'School',
+      default: null,
+    },
     name: {
+
       type: String,
       required: true,
       trim: true, // e.g. "Class 10"

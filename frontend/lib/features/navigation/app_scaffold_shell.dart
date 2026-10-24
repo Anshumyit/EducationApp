@@ -13,6 +13,11 @@ import '../parent/presentation/parent_dashboard_screen.dart';
 import '../teacher/presentation/mark_attendance_screen.dart';
 import '../teacher/presentation/student_list_screen.dart';
 import '../teacher/presentation/teacher_dashboard_screen.dart';
+import '../super_admin/presentation/super_admin_dashboard_screen.dart';
+import '../super_admin/presentation/schools_management_screen.dart';
+import '../super_admin/presentation/admin_accounts_screen.dart';
+import '../super_admin/presentation/permission_matrix_screen.dart';
+import '../super_admin/presentation/central_broadcast_screen.dart';
 
 class AppScaffoldShell extends ConsumerStatefulWidget {
   const AppScaffoldShell({super.key});
@@ -34,7 +39,22 @@ class _AppScaffoldShellState extends ConsumerState<AppScaffoldShell> {
     List<Widget> screens = [];
     List<NavigationDestination> items = [];
 
-    if (user.isAdmin) {
+    if (user.isSuperAdmin) {
+      screens = [
+        const SuperAdminDashboardScreen(),
+        const SchoolsManagementScreen(),
+        const AdminAccountsScreen(),
+        const PermissionMatrixScreen(),
+        const CentralBroadcastScreen(),
+      ];
+      items = [
+        const NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
+        const NavigationDestination(icon: Icon(Icons.domain_outlined), selectedIcon: Icon(Icons.domain_rounded), label: 'Schools'),
+        const NavigationDestination(icon: Icon(Icons.admin_panel_settings_outlined), selectedIcon: Icon(Icons.admin_panel_settings_rounded), label: 'Admins'),
+        const NavigationDestination(icon: Icon(Icons.tune_outlined), selectedIcon: Icon(Icons.tune_rounded), label: 'Limits'),
+        const NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign_rounded), label: 'Broadcast'),
+      ];
+    } else if (user.isAdmin) {
       screens = [
         const AdminDashboardScreen(),
         const TeacherDirectoryScreen(),
