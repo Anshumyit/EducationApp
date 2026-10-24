@@ -13,6 +13,9 @@ class TeacherState {
   final Map<String, dynamic>? todayAttendance;
   final List<dynamic> attendanceLogs;
   final Map<String, dynamic>? monthlyReport;
+  final List<dynamic> syllabusLogs;
+  final Map<String, dynamic>? syllabusOverview;
+  final List<dynamic> availableClasses;
   final String? errorMessage;
 
   TeacherState({
@@ -24,6 +27,9 @@ class TeacherState {
     this.todayAttendance,
     this.attendanceLogs = const [],
     this.monthlyReport,
+    this.syllabusLogs = const [],
+    this.syllabusOverview,
+    this.availableClasses = const [],
     this.errorMessage,
   });
 
@@ -36,6 +42,9 @@ class TeacherState {
     Map<String, dynamic>? todayAttendance,
     List<dynamic>? attendanceLogs,
     Map<String, dynamic>? monthlyReport,
+    List<dynamic>? syllabusLogs,
+    Map<String, dynamic>? syllabusOverview,
+    List<dynamic>? availableClasses,
     String? errorMessage,
     bool clearError = false,
   }) {
@@ -48,10 +57,14 @@ class TeacherState {
       todayAttendance: todayAttendance ?? this.todayAttendance,
       attendanceLogs: attendanceLogs ?? this.attendanceLogs,
       monthlyReport: monthlyReport ?? this.monthlyReport,
+      syllabusLogs: syllabusLogs ?? this.syllabusLogs,
+      syllabusOverview: syllabusOverview ?? this.syllabusOverview,
+      availableClasses: availableClasses ?? this.availableClasses,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 }
+
 
 class TeacherNotifier extends StateNotifier<TeacherState> {
   TeacherNotifier() : super(TeacherState());
@@ -226,6 +239,9 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
     required String subject,
     required String classId,
     required DateTime submissionDate,
+    int maxMarks = 20,
+    String instructions = '',
+    List<Map<String, dynamic>> attachments = const [],
   }) async {
     try {
       await _dio.post(
@@ -236,6 +252,9 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
           'subject': subject,
           'classId': classId,
           'submissionDate': submissionDate.toIso8601String(),
+          'maxMarks': maxMarks,
+          'instructions': instructions,
+          'attachments': attachments,
         },
       );
       return true;
@@ -245,7 +264,66 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
     }
   }
 
+  Future<List<dynamic>> fetchClassHomework(String classId, {String? subject}) async {
+    try {
+      final res = await _dio.get(
+        ApiConstants.classHomework(classId),
+        queryParameters: {
+          if (subject != null && subject.isNotEmpty) 'subject': subject,
+        },
+      );
+      return res.data['data'] as List<dynamic>? ?? [];
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> fetchHomeworkSubmissions(String homeworkId) async {
+    try {
+      final res = await _dio.get(ApiConstants.homeworkSubmissions(homeworkId));
+      return res.data['data'] as Map<String, dynamic>?;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return null;
+    }
+  }
+
+  Future<bool> gradeHomeworkSubmission({
+    required String homeworkId,
+    required String studentId,
+    required double marksObtained,
+    String feedback = '',
+    String status = 'GRADED',
+  }) async {
+    try {
+      await _dio.post(
+        ApiConstants.gradeHomework(homeworkId, studentId),
+        data: {
+          'marksObtained': marksObtained,
+          'feedback': feedback,
+          'status': status,
+        },
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return false;
+    }
+  }
+
+  Future<bool> deleteHomework(String homeworkId) async {
+    try {
+      await _dio.delete('${ApiConstants.homework}/$homeworkId');
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return false;
+    }
+  }
+
   Future<bool> sendNotice({
+
     required String title,
     required String message,
   }) async {
@@ -278,8 +356,336 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
       return false;
     }
   }
+
+  Future<List<dynamic>> fetchAvailableClasses() async {
+    try {
+      final res = await _dio.get(ApiConstants.teacherClasses);
+      final classes = res.data['data'] as List<dynamic>? ?? [];
+      state = state.copyWith(availableClasses: classes);
+      return classes;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> fetchSyllabusOverview({
+    String? classId,
+    String? subject,
+  }) async {
+    try {
+      final res = await _dio.get(
+        ApiConstants.teacherSyllabusOverview,
+        queryParameters: {
+          if (classId != null && classId.isNotEmpty) 'classId': classId,
+          if (subject != null && subject.isNotEmpty) 'subject': subject,
+        },
+      );
+      final data = res.data['data'] as Map<String, dynamic>?;
+      state = state.copyWith(syllabusOverview: data);
+      return data;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return null;
+    }
+  }
+
+  Future<List<dynamic>> fetchSyllabusLogs({
+    String? classId,
+    String? subject,
+    String? date,
+    String? status,
+  }) async {
+    try {
+      final res = await _dio.get(
+        ApiConstants.teacherSyllabusLogs,
+        queryParameters: {
+          if (classId != null && classId.isNotEmpty) 'classId': classId,
+          if (subject != null && subject.isNotEmpty) 'subject': subject,
+          if (date != null && date.isNotEmpty) 'date': date,
+          if (status != null && status.isNotEmpty) 'status': status,
+        },
+      );
+      final list = res.data['data'] as List<dynamic>? ?? [];
+      state = state.copyWith(syllabusLogs: list);
+      return list;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return [];
+    }
+  }
+
+  Future<bool> createDailySyllabusLog({
+    required String classId,
+    required String subject,
+    required String date,
+    required String chapter,
+    required String topic,
+    required String dailyTarget,
+    String status = 'COMPLETED',
+    double completionPercentage = 0,
+    int durationMinutes = 45,
+    String nextClassTarget = '',
+    List<Map<String, dynamic>> studyMaterials = const [],
+    String notes = '',
+  }) async {
+    try {
+      await _dio.post(
+        ApiConstants.teacherSyllabusLogs,
+        data: {
+          'classId': classId,
+          'subject': subject,
+          'date': date,
+          'chapter': chapter,
+          'topic': topic,
+          'dailyTarget': dailyTarget,
+          'status': status,
+          'completionPercentage': completionPercentage.round(),
+          'durationMinutes': durationMinutes,
+          'nextClassTarget': nextClassTarget,
+          'studyMaterials': studyMaterials,
+          'notes': notes,
+        },
+      );
+      await fetchSyllabusLogs(classId: classId, subject: subject);
+      await fetchSyllabusOverview(classId: classId, subject: subject);
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return false;
+    }
+  }
+
+  Future<bool> updateDailySyllabusLog({
+    required String logId,
+    required Map<String, dynamic> data,
+    String? classId,
+    String? subject,
+  }) async {
+    try {
+      await _dio.put(
+        '${ApiConstants.teacherSyllabusLogs}/$logId',
+        data: data,
+      );
+      await fetchSyllabusLogs(classId: classId, subject: subject);
+      await fetchSyllabusOverview(classId: classId, subject: subject);
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return false;
+    }
+  }
+
+  Future<bool> deleteDailySyllabusLog({
+    required String logId,
+    String? classId,
+    String? subject,
+  }) async {
+    try {
+      await _dio.delete('${ApiConstants.teacherSyllabusLogs}/$logId');
+      await fetchSyllabusLogs(classId: classId, subject: subject);
+      await fetchSyllabusOverview(classId: classId, subject: subject);
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return false;
+    }
+  }
+
+  // ================= Parent Communication Suite =================
+
+  Future<List<dynamic>> fetchConversation(String otherUserId, {String? studentId}) async {
+    try {
+      final res = await _dio.get(
+        ApiConstants.conversation(otherUserId),
+        queryParameters: {
+          if (studentId != null && studentId.isNotEmpty) 'studentId': studentId,
+        },
+      );
+      return res.data['data'] as List<dynamic>? ?? [];
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return [];
+    }
+  }
+
+  Future<bool> sendDirectMessage({
+    required String recipientId,
+    String? studentId,
+    required String message,
+    String type = 'INDIVIDUAL_MESSAGE',
+    String title = '',
+    List<Map<String, dynamic>> attachments = const [],
+  }) async {
+    try {
+      await _dio.post(
+        ApiConstants.directMessages,
+        data: {
+          'recipientId': recipientId,
+          if (studentId != null) 'studentId': studentId,
+          'message': message,
+          'type': type,
+          'title': title,
+          'attachments': attachments,
+        },
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> fetchClassAnnouncements(String classId) async {
+    try {
+      final res = await _dio.get(ApiConstants.classAnnouncementsList(classId));
+      return res.data['data'] as List<dynamic>? ?? [];
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return [];
+    }
+  }
+
+  Future<bool> sendClassAnnouncement({
+    required String classId,
+    required String title,
+    required String message,
+    List<Map<String, dynamic>> attachments = const [],
+  }) async {
+    try {
+      await _dio.post(
+        ApiConstants.classAnnouncements,
+        data: {
+          'classId': classId,
+          'title': title,
+          'message': message,
+          'attachments': attachments,
+        },
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return false;
+    }
+  }
+
+  Future<bool> shareStudentProgress({
+    required String studentId,
+    String teacherRemarks = '',
+    String overallGrade = 'A',
+  }) async {
+    try {
+      await _dio.post(
+        ApiConstants.shareProgress,
+        data: {
+          'studentId': studentId,
+          'teacherRemarks': teacherRemarks,
+          'overallGrade': overallGrade,
+        },
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> fetchMeetings() async {
+    try {
+      final res = await _dio.get(ApiConstants.meetings);
+      return res.data['data'] as List<dynamic>? ?? [];
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return [];
+    }
+  }
+
+  Future<bool> scheduleMeeting({
+    required String parentId,
+    required String studentId,
+    required String classId,
+    required String title,
+    String agenda = '',
+    required String meetingDate,
+    required String timeSlot,
+    String mode = 'IN_PERSON_AT_SCHOOL',
+    String meetLinkOrRoom = 'Room 204',
+  }) async {
+    try {
+      await _dio.post(
+        ApiConstants.meetings,
+        data: {
+          'parentId': parentId,
+          'studentId': studentId,
+          'classId': classId,
+          'title': title,
+          'agenda': agenda,
+          'meetingDate': meetingDate,
+          'timeSlot': timeSlot,
+          'mode': mode,
+          'meetLinkOrRoom': meetLinkOrRoom,
+        },
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return false;
+    }
+  }
+
+  Future<bool> updateMeetingStatus({
+    required String meetingId,
+    required String status,
+    String? teacherNotes,
+  }) async {
+    try {
+      await _dio.patch(
+        ApiConstants.updateMeeting(meetingId),
+        data: {
+          'status': status,
+          if (teacherNotes != null) 'teacherNotes': teacherNotes,
+        },
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> fetchParentQueries() async {
+    try {
+      final res = await _dio.get(ApiConstants.parentQueries);
+      return res.data['data'] as List<dynamic>? ?? [];
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return [];
+    }
+  }
+
+  Future<bool> replyToParentQuery({
+    required String queryId,
+    required String replyMessage,
+    String resolutionStatus = 'RESOLVED',
+  }) async {
+    try {
+      await _dio.post(
+        ApiConstants.replyParentQuery(queryId),
+        data: {
+          'replyMessage': replyMessage,
+          'resolutionStatus': resolutionStatus,
+        },
+      );
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return false;
+    }
+  }
 }
+
 
 final teacherProvider = StateNotifierProvider<TeacherNotifier, TeacherState>((ref) {
   return TeacherNotifier();
 });
+

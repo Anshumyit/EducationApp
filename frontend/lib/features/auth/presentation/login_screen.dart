@@ -6,9 +6,9 @@ import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../providers/auth_provider.dart';
-import 'otp_screen.dart';
 import 'pending_approval_screen.dart';
 import 'register_screen.dart';
+
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -80,11 +80,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Logo & Header
                 Center(
                   child: Container(
-                    height: 80,
-                    width: 80,
+                    height: 84,
+                    width: 84,
                     decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(22),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.primary.withOpacity(0.4),
@@ -93,9 +92,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.school_rounded, size: 44, color: Colors.white),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(22),
+                      child: Image.asset(
+                        'assets/icon/app_icon.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+
+                          decoration: BoxDecoration(
+                            gradient: AppColors.primaryGradient,
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                          child: const Icon(Icons.school_rounded, size: 44, color: Colors.white),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
+
                 const SizedBox(height: 24),
                 Center(
                   child: Text(

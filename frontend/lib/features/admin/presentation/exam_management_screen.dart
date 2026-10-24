@@ -58,13 +58,22 @@ class _ExamManagementScreenState extends ConsumerState<ExamManagementScreen> {
                     examTitle: exam['title'],
                     examType: exam['type'],
                   );
-              if (mounted && ok) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Report cards published & sent to parent portals!'),
-                    backgroundColor: AppColors.emerald,
-                  ),
-                );
+              if (mounted) {
+                if (ok) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Report cards published & sent to parent portals!'),
+                      backgroundColor: AppColors.emerald,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ref.read(adminProvider).errorMessage ?? 'Failed to publish exam results'),
+                      backgroundColor: AppColors.rose,
+                    ),
+                  );
+                }
               }
             },
             child: const Text('Publish Report Cards', style: TextStyle(color: Colors.white)),
@@ -84,66 +93,74 @@ class _ExamManagementScreenState extends ConsumerState<ExamManagementScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Academic Scorecard',
-                    style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                  ),
-                  StatusBadge(status: scorecard['overallGrade'] ?? 'A', color: AppColors.emerald),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${scorecard['studentId']?['name'] ?? 'Student'} • ${scorecard['examTitle']}',
-                style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildStat('Percentage', '${scorecard['percentage']}%', AppColors.primary),
-                    _buildStat('Marks', '${scorecard['totalMarksObtained']} / ${scorecard['totalMaxMarks']}', AppColors.textPrimary),
-                    _buildStat('Overall Grade', scorecard['overallGrade'] ?? 'A', AppColors.emerald),
+                    Text(
+                      'Academic Scorecard',
+                      style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    ),
+                    StatusBadge(status: scorecard['overallGrade'] ?? 'A', color: AppColors.emerald),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text('Subject-wise Breakdown', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              const SizedBox(height: 8),
-              ...subjects.map((s) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
+                const SizedBox(height: 4),
+                Text(
+                  '${scorecard['studentId']?['name'] ?? 'Student'} • ${scorecard['examTitle']}',
+                  style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Text(s['subjectName'] ?? 'Subject', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textPrimary)),
-                      Text('${s['marksObtained']} / ${s['maxMarks']} (${s['grade']})',
-                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                      _buildStat('Percentage', '${scorecard['percentage']}%', AppColors.primary),
+                      _buildStat('Marks', '${scorecard['totalMarksObtained']} / ${scorecard['totalMaxMarks']}', AppColors.textPrimary),
+                      _buildStat('Overall Grade', scorecard['overallGrade'] ?? 'A', AppColors.emerald),
                     ],
                   ),
-                );
-              }),
-              const SizedBox(height: 20),
-              CustomButton(
-                text: 'Close',
-                onPressed: () => Navigator.pop(ctx),
-              ),
-            ],
+                ),
+                const SizedBox(height: 16),
+                Text('Subject-wise Breakdown', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const SizedBox(height: 8),
+                ...subjects.map((s) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(s['subjectName'] ?? 'Subject', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textPrimary)),
+                        Text('${s['marksObtained']} / ${s['maxMarks']} (${s['grade']})',
+                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 20),
+                CustomButton(
+                  text: 'Close',
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
           ),
         ),
       ),

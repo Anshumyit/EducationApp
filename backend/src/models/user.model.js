@@ -91,10 +91,30 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+userSchema.pre('validate', function () {
+  if (this.email !== undefined) {
+    if (typeof this.email === 'string') {
+      const trimmed = this.email.trim();
+      this.email = trimmed.length > 0 ? trimmed.toLowerCase() : undefined;
+    } else {
+      this.email = undefined;
+    }
+  }
+  if (this.phone !== undefined) {
+    if (typeof this.phone === 'string') {
+      const trimmed = this.phone.trim();
+      this.phone = trimmed.length > 0 ? trimmed : undefined;
+    } else {
+      this.phone = undefined;
+    }
+  }
+});
+
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 10);
 });
+
 
 userSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);

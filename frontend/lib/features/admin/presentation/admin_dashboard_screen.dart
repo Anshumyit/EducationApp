@@ -97,11 +97,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               // Pending Approvals Alert Banner
               if (pendingTotal > 0)
                 GestureDetector(
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const UserApprovalsScreen()),
                     );
+                    if (context.mounted) {
+                      ref.read(adminProvider.notifier).loadDashboard();
+                    }
                   },
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -487,11 +490,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       title: 'User Approvals Hub',
                       subtitle: 'Review & approve new faculty and guardian registrations',
                       badgeCount: pendingTotal,
-                      onTap: () {
-                        Navigator.push(
+                      onTap: () async {
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const UserApprovalsScreen()),
                         );
+                        if (context.mounted) {
+                          ref.read(adminProvider.notifier).loadDashboard();
+                        }
                       },
                     ),
                     const Divider(color: AppColors.border, height: 1),

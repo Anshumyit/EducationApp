@@ -7,9 +7,11 @@ const {
   registerParent,
   loginUser,
   getCurrentUser,
+  checkCredentialAvailability,
 } = require('../controllers/auth.controller');
 const { verifyJWT } = require('../middlewares/auth.middleware');
 
+router.get('/check-availability', checkCredentialAvailability);
 router.post('/register/admin', registerAdmin);
 router.post('/verify-otp', verifyAdminOtp);
 router.post('/register/teacher', registerTeacher);

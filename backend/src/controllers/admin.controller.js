@@ -165,16 +165,25 @@ const createStudent = asyncHandler(async (req, res) => {
     photo,
   } = req.body;
 
-  if (!name || !classId || !parentId || !address || !emergencyContact) {
-    throw new ApiError(400, 'Name, Class, Parent, Address, and Emergency Contact are required');
+  if (!name || !classId) {
+    throw new ApiError(400, 'Student Name and Class are required');
   }
 
-  // Validate ClassRoom & Parent exist
+  // Validate ClassRoom
   const classroom = await ClassRoom.findById(classId);
   if (!classroom) throw new ApiError(404, 'Classroom not found');
 
-  const parent = await User.findOne({ _id: parentId, role: ROLES.PARENT });
-  if (!parent) throw new ApiError(404, 'Parent account not found');
+  // Resolve parent account: either provided ID, any existing parent, or admin user
+  let parent = null;
+  if (parentId && parentId.length === 24) {
+    parent = await User.findOne({ _id: parentId });
+  }
+  if (!parent) {
+    parent = await User.findOne({ role: ROLES.PARENT });
+  }
+  if (!parent) {
+    parent = req.user;
+  }
 
   const generatedAdm =
     admissionNumber || `ADM-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -191,27 +200,29 @@ const createStudent = asyncHandler(async (req, res) => {
     rollNumber: Number(calculatedRoll),
     admissionNumber: generatedAdm,
     classId,
-    parentId,
+    parentId: parent._id,
     dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
     gender: gender || 'MALE',
     bloodGroup: bloodGroup || 'O+',
-    address,
-    emergencyContact,
+    address: address || 'Campus Residential Enclave',
+    emergencyContact: emergencyContact || '9876543210',
     photo:
       photo ||
       'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=150&q=80',
     status: 'ACTIVE',
   });
 
-  // Notify parent
-  await NotificationService.sendNotification({
-    title: 'New Student Enrollment 🎒',
-    message: `Your child ${name} has been enrolled in ${classroom.name} - ${classroom.section} (Roll #${calculatedRoll}, Admission #${generatedAdm}).`,
-    type: 'GENERAL',
-    targetRole: 'SPECIFIC',
-    recipientId: parent._id,
-    senderId: req.user._id,
-  });
+  // Notify parent if available
+  if (parent && parent._id) {
+    await NotificationService.sendNotification({
+      title: 'New Student Enrollment 🎒',
+      message: `Your child ${name} has been enrolled in ${classroom.name} - ${classroom.section} (Roll #${calculatedRoll}, Admission #${generatedAdm}).`,
+      type: 'GENERAL',
+      targetRole: 'SPECIFIC',
+      recipientId: parent._id,
+      senderId: req.user._id,
+    });
+  }
 
   return res.status(201).json(new ApiResponse(201, student, 'Student enrolled successfully'));
 });
@@ -323,28 +334,44 @@ const getTeachersList = asyncHandler(async (req, res) => {
  * Teacher & Staff Management: Create teacher directly by Admin
  */
 const createTeacher = asyncHandler(async (req, res) => {
-  const { name, email, phone, password, subjects, qualification, salary } = req.body;
+  let { name, email, phone, password, subjects, qualification, salary } = req.body;
 
-  if (!name || !email || !phone) {
-    throw new ApiError(400, 'Name, Email, and Phone are required');
+  if (!name || !email) {
+    throw new ApiError(400, 'Faculty Name and Email are required');
   }
 
-  const existing = await User.findOne({ $or: [{ email }, { phone }] });
-  if (existing) {
-    throw new ApiError(409, 'A user with this email or phone already exists');
+  if (!phone || !phone.trim()) {
+    phone = `+91 98${Math.floor(10000000 + Math.random() * 90000000)}`;
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanPhone = phone ? phone.trim() : null;
+
+  if (cleanEmail) {
+    const existingByEmail = await User.findOne({ email: cleanEmail });
+    if (existingByEmail) {
+      throw new ApiError(409, `Email '${cleanEmail}' already exists in the database.`);
+    }
+  }
+
+  if (cleanPhone) {
+    const existingByPhone = await User.findOne({ phone: cleanPhone });
+    if (existingByPhone) {
+      throw new ApiError(409, `Phone number '${cleanPhone}' already exists in the database.`);
+    }
   }
 
   const teacher = await User.create({
-    name,
-    email,
-    phone,
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    phone: phone.trim(),
     password: password || 'Password@123',
     role: ROLES.TEACHER,
     status: USER_STATUS.APPROVED,
     isOtpVerified: true,
     subjects: Array.isArray(subjects) ? subjects : subjects ? subjects.split(',').map((s) => s.trim()) : [],
     qualification: qualification || 'B.Ed, Graduate',
-    salary: salary ? Number(salary) : 45000,
+    salary: salary ? Number(salary) : 55000,
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
   });
 
@@ -436,12 +463,16 @@ const createClassRoom = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Class name and section are required');
   }
 
-  const existing = await ClassRoom.findOne({ name, section });
-  if (existing) {
-    throw new ApiError(409, `Class ${name} ${section} already exists`);
+  let classroom = await ClassRoom.findOne({ name, section });
+  if (classroom) {
+    if (roomNumber) classroom.roomNumber = roomNumber;
+    if (capacity) classroom.capacity = Number(capacity);
+    if (classTeacherId) classroom.classTeacher = classTeacherId;
+    await classroom.save();
+    return res.status(200).json(new ApiResponse(200, classroom, `Class ${name} ${section} updated successfully`));
   }
 
-  const classroom = await ClassRoom.create({
+  classroom = await ClassRoom.create({
     name,
     section,
     roomNumber: roomNumber || '',

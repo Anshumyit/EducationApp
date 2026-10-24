@@ -53,6 +53,7 @@ class _StudentManagementScreenState extends ConsumerState<StudentManagementScree
     String bloodGroup = studentToEdit?['bloodGroup'] ?? 'O+';
     String? selectedClass = studentToEdit?['classId']?['_id'] ?? _selectedClassId;
     String? selectedParent = studentToEdit?['parentId']?['_id'];
+    bool isSubmitting = false;
 
     final classes = ref.read(adminProvider).classes;
     if (selectedClass == null && classes.isNotEmpty) {
@@ -68,185 +69,203 @@ class _StudentManagementScreenState extends ConsumerState<StudentManagementScree
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 24,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        studentToEdit == null ? 'Enroll New Student' : 'Edit Student Profile',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: AppColors.textMuted),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  CustomTextField(controller: nameCtrl, label: 'Full Student Name'),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomTextField(
-                          controller: rollCtrl,
-                          label: 'Roll Number',
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: CustomTextField(
-                          controller: admCtrl,
-                          label: 'Admission # (Auto if empty)',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Class Selection Dropdown
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedClass,
-                        isExpanded: true,
-                        dropdownColor: AppColors.surface,
-                        hint: Text('Select Class & Section', style: GoogleFonts.inter(color: AppColors.textMuted)),
-                        items: classes.map<DropdownMenuItem<String>>((c) {
-                          return DropdownMenuItem<String>(
-                            value: c['_id'],
-                            child: Text(
-                              '${c['name']} - ${c['section']}',
-                              style: GoogleFonts.inter(color: AppColors.textPrimary),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) => setModalState(() => selectedClass = val),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomTextField(controller: dobCtrl, label: 'DOB (YYYY-MM-DD)'),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: bloodGroup,
-                              isExpanded: true,
-                              dropdownColor: AppColors.surface,
-                              items: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((bg) {
-                                return DropdownMenuItem(
-                                  value: bg,
-                                  child: Text('Blood: $bg', style: GoogleFonts.inter(color: AppColors.textPrimary)),
-                                );
-                              }).toList(),
-                              onChanged: (val) => setModalState(() => bloodGroup = val!),
-                            ),
+          final mediaQuery = MediaQuery.of(ctx);
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 24,
+                bottom: mediaQuery.viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          studentToEdit == null ? 'Enroll New Student' : 'Edit Student Profile',
+                          style: GoogleFonts.outfit(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
                           ),
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: AppColors.textMuted),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(controller: nameCtrl, label: 'Full Student Name'),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(
+                            controller: rollCtrl,
+                            label: 'Roll Number',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: CustomTextField(
+                            controller: admCtrl,
+                            label: 'Admission # (Auto if empty)',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Class Selection Dropdown
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  CustomTextField(controller: addressCtrl, label: 'Residential Address'),
-                  const SizedBox(height: 12),
-                  CustomTextField(
-                    controller: emergencyCtrl,
-                    label: 'Emergency / Guardian Phone',
-                    keyboardType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 20),
-                  CustomButton(
-                    text: studentToEdit == null ? 'Enroll Student' : 'Save Changes',
-                    onPressed: () async {
-                      if (nameCtrl.text.trim().isEmpty || selectedClass == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter student name and choose a class')),
-                        );
-                        return;
-                      }
-
-                      // Resolve parent ID if not selected (fallback to first parent user or creator)
-                      final parentId = selectedParent ??
-                          studentToEdit?['parentId']?['_id'] ??
-                          '650000000000000000000004'; // fallback ID for demo parent
-
-                      final payload = {
-                        'name': nameCtrl.text.trim(),
-                        'rollNumber': int.tryParse(rollCtrl.text.trim()) ?? 1,
-                        'admissionNumber': admCtrl.text.trim().isNotEmpty ? admCtrl.text.trim() : null,
-                        'classId': selectedClass,
-                        'parentId': parentId,
-                        'dateOfBirth': dobCtrl.text.trim(),
-                        'gender': gender,
-                        'bloodGroup': bloodGroup,
-                        'address': addressCtrl.text.trim().isNotEmpty
-                            ? addressCtrl.text.trim()
-                            : 'Delhi Campus Enclave',
-                        'emergencyContact': emergencyCtrl.text.trim().isNotEmpty
-                            ? emergencyCtrl.text.trim()
-                            : '9876543214',
-                      };
-
-                      bool ok;
-                      if (studentToEdit == null) {
-                        ok = await ref.read(adminProvider.notifier).createStudent(payload);
-                      } else {
-                        ok = await ref
-                            .read(adminProvider.notifier)
-                            .updateStudent(studentToEdit['_id'], payload);
-                      }
-
-                      if (mounted) {
-                        Navigator.pop(ctx);
-                        if (ok) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                studentToEdit == null
-                                    ? 'Student enrolled successfully!'
-                                    : 'Student profile updated!',
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedClass,
+                          isExpanded: true,
+                          dropdownColor: AppColors.surface,
+                          hint: Text('Select Class & Section', style: GoogleFonts.inter(color: AppColors.textMuted)),
+                          items: classes.map<DropdownMenuItem<String>>((c) {
+                            return DropdownMenuItem<String>(
+                              value: c['_id'],
+                              child: Text(
+                                '${c['name']} - ${c['section']}',
+                                style: GoogleFonts.inter(color: AppColors.textPrimary),
                               ),
-                              backgroundColor: AppColors.emerald,
+                            );
+                          }).toList(),
+                          onChanged: (val) => setModalState(() => selectedClass = val),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(controller: dobCtrl, label: 'DOB (YYYY-MM-DD)'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceVariant,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.border),
                             ),
-                          );
-                        }
-                      }
-                    },
-                  ),
-                ],
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: bloodGroup,
+                                isExpanded: true,
+                                dropdownColor: AppColors.surface,
+                                items: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((bg) {
+                                  return DropdownMenuItem(
+                                    value: bg,
+                                    child: Text('Blood: $bg', style: GoogleFonts.inter(color: AppColors.textPrimary)),
+                                  );
+                                }).toList(),
+                                onChanged: (val) => setModalState(() => bloodGroup = val!),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(controller: addressCtrl, label: 'Residential Address'),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: emergencyCtrl,
+                      label: 'Emergency / Guardian Phone',
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 20),
+                    CustomButton(
+                      text: studentToEdit == null ? 'Enroll Student' : 'Save Changes',
+                      isLoading: isSubmitting,
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              if (nameCtrl.text.trim().isEmpty || selectedClass == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please enter student name and choose a class'),
+                                    backgroundColor: AppColors.rose,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setModalState(() => isSubmitting = true);
+
+                              final parentId = selectedParent ?? studentToEdit?['parentId']?['_id'];
+
+                              final payload = {
+                                'name': nameCtrl.text.trim(),
+                                'rollNumber': int.tryParse(rollCtrl.text.trim()) ?? 1,
+                                'admissionNumber': admCtrl.text.trim().isNotEmpty ? admCtrl.text.trim() : null,
+                                'classId': selectedClass,
+                                if (parentId != null) 'parentId': parentId,
+                                'dateOfBirth': dobCtrl.text.trim(),
+                                'gender': gender,
+                                'bloodGroup': bloodGroup,
+                                'address': addressCtrl.text.trim().isNotEmpty
+                                    ? addressCtrl.text.trim()
+                                    : 'Campus Residential Enclave',
+                                'emergencyContact': emergencyCtrl.text.trim().isNotEmpty
+                                    ? emergencyCtrl.text.trim()
+                                    : '9876543210',
+                              };
+
+                              bool ok;
+                              if (studentToEdit == null) {
+                                ok = await ref.read(adminProvider.notifier).createStudent(payload);
+                              } else {
+                                ok = await ref
+                                    .read(adminProvider.notifier)
+                                    .updateStudent(studentToEdit['_id'], payload);
+                              }
+
+                              if (mounted) {
+                                Navigator.pop(ctx);
+                                if (ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        studentToEdit == null
+                                            ? 'Student enrolled successfully!'
+                                            : 'Student profile updated!',
+                                      ),
+                                      backgroundColor: AppColors.emerald,
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        ref.read(adminProvider).errorMessage ?? 'Failed to save student profile',
+                                      ),
+                                      backgroundColor: AppColors.rose,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -297,13 +316,22 @@ class _StudentManagementScreenState extends ConsumerState<StudentManagementScree
                     tcNumber: tcNumCtrl.text.trim(),
                     tcReason: reasonCtrl.text.trim(),
                   );
-              if (mounted && ok) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Transfer Certificate generated and student status updated!'),
-                    backgroundColor: AppColors.rose,
-                  ),
-                );
+              if (mounted) {
+                if (ok) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Transfer Certificate generated and student status updated!'),
+                      backgroundColor: AppColors.rose,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ref.read(adminProvider).errorMessage ?? 'Failed to issue TC'),
+                      backgroundColor: AppColors.rose,
+                    ),
+                  );
+                }
               }
             },
             child: const Text('Issue TC', style: TextStyle(color: Colors.white)),
@@ -378,13 +406,22 @@ class _StudentManagementScreenState extends ConsumerState<StudentManagementScree
                       targetClass!,
                       session: sessionCtrl.text.trim(),
                     );
-                if (mounted && ok) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Student successfully promoted to next class!'),
-                      backgroundColor: AppColors.emerald,
-                    ),
-                  );
+                if (mounted) {
+                  if (ok) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Student successfully promoted to next class!'),
+                        backgroundColor: AppColors.emerald,
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(ref.read(adminProvider).errorMessage ?? 'Failed to promote student'),
+                        backgroundColor: AppColors.rose,
+                      ),
+                    );
+                  }
                 }
               },
               child: const Text('Promote', style: TextStyle(color: Colors.white)),

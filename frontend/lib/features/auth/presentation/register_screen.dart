@@ -36,6 +36,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final phone = _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim();
     final password = _passwordController.text;
 
+    if (email == null && phone == null) {
+      _showError('Please provide either an Email address or Mobile Number.');
+      return;
+    }
+
     final authNotifier = ref.read(authProvider.notifier);
 
     if (_selectedRole == 'ADMIN') {
@@ -106,10 +111,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   void _showError(String? msg) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: AppColors.rose,
-        content: Text(msg ?? 'Registration failed. Please check inputs.'),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 5),
+        content: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                msg ?? 'Registration failed. Please check inputs.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -251,6 +275,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   onPressed: _handleRegister,
                 ),
 
+                const SizedBox(height: 20),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Already have an account? ',
+                      style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 14),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Text(
+                        'Sign In',
+                        style: GoogleFonts.outfit(
+                          color: AppColors.primaryLight,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
               ],
             ),

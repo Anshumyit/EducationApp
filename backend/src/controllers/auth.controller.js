@@ -8,6 +8,64 @@ const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 
 /**
+ * Helper to check if a user already exists with given email or phone
+ */
+const findExistingUser = async (email, phone) => {
+  const criteria = [];
+  if (email && typeof email === 'string' && email.trim()) {
+    criteria.push({ email: email.trim().toLowerCase() });
+  }
+  if (phone && typeof phone === 'string' && phone.trim()) {
+    criteria.push({ phone: phone.trim() });
+  }
+  if (criteria.length === 0) return null;
+  return await User.findOne({ $or: criteria });
+};
+
+/**
+ * Validate that email and phone do not already exist in the database.
+ * Throws explicit error defining whether email or phone number already exists.
+ */
+const validateUniqueCredentials = async (email, phone) => {
+  const cleanEmail = email && typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : null;
+  const cleanPhone = phone && typeof phone === 'string' && phone.trim() ? phone.trim() : null;
+
+  let existingEmailUser = null;
+  let existingPhoneUser = null;
+
+  if (cleanEmail) {
+    existingEmailUser = await User.findOne({ email: cleanEmail });
+  }
+  if (cleanPhone) {
+    existingPhoneUser = await User.findOne({ phone: cleanPhone });
+  }
+
+  if (existingEmailUser && existingPhoneUser) {
+    if (existingEmailUser._id.toString() === existingPhoneUser._id.toString()) {
+      throw new ApiError(
+        409,
+        `Both email '${cleanEmail}' and phone number '${cleanPhone}' already exist in the database.`
+      );
+    } else {
+      throw new ApiError(
+        409,
+        `Email '${cleanEmail}' and phone number '${cleanPhone}' already exist in the database.`
+      );
+    }
+  } else if (existingEmailUser) {
+    throw new ApiError(
+      409,
+      `Email '${cleanEmail}' already exists in the database. Please use a different email or log in.`
+    );
+  } else if (existingPhoneUser) {
+    throw new ApiError(
+      409,
+      `Phone number '${cleanPhone}' already exists in the database. Please use a different phone number or log in.`
+    );
+  }
+};
+
+/**
  * Register Admin -> generates OTP
  */
 const registerAdmin = asyncHandler(async (req, res) => {
@@ -17,13 +75,7 @@ const registerAdmin = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Name, password, and email or phone are required');
   }
 
-  const existing = await User.findOne({
-    $or: [{ email: email ? email.toLowerCase() : null }, { phone: phone || null }].filter(Boolean),
-  });
-
-  if (existing) {
-    throw new ApiError(409, 'An account with this email or phone already exists');
-  }
+  await validateUniqueCredentials(email, phone);
 
   const otp = OtpService.generateOtp();
   const expiresAt = OtpService.getExpiryDate(10);
@@ -120,13 +172,7 @@ const registerTeacher = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Name, password, and email or phone are required');
   }
 
-  const existing = await User.findOne({
-    $or: [{ email: email ? email.toLowerCase() : null }, { phone: phone || null }].filter(Boolean),
-  });
-
-  if (existing) {
-    throw new ApiError(409, 'An account with this email or phone already exists');
-  }
+  await validateUniqueCredentials(email, phone);
 
   const teacher = await User.create({
     name,
@@ -164,13 +210,7 @@ const registerParent = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Name, password, and email or phone are required');
   }
 
-  const existing = await User.findOne({
-    $or: [{ email: email ? email.toLowerCase() : null }, { phone: phone || null }].filter(Boolean),
-  });
-
-  if (existing) {
-    throw new ApiError(409, 'An account with this email or phone already exists');
-  }
+  await validateUniqueCredentials(email, phone);
 
   const parent = await User.create({
     name,
@@ -282,6 +322,47 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, user, 'User details retrieved'));
 });
 
+/**
+ * Check availability of email or phone before/during registration
+ */
+const checkCredentialAvailability = asyncHandler(async (req, res) => {
+  const { email, phone } = req.query;
+  const cleanEmail = email && typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : null;
+  const cleanPhone = phone && typeof phone === 'string' && phone.trim() ? phone.trim() : null;
+
+  let emailExists = false;
+  let phoneExists = false;
+
+  if (cleanEmail) {
+    const existing = await User.findOne({ email: cleanEmail });
+    if (existing) emailExists = true;
+  }
+  if (cleanPhone) {
+    const existing = await User.findOne({ phone: cleanPhone });
+    if (existing) phoneExists = true;
+  }
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        emailExists,
+        phoneExists,
+        available: !emailExists && !phoneExists,
+        message:
+          emailExists && phoneExists
+            ? `Both email '${cleanEmail}' and phone '${cleanPhone}' are already registered.`
+            : emailExists
+            ? `Email '${cleanEmail}' already exists in the database.`
+            : phoneExists
+            ? `Phone number '${cleanPhone}' already exists in the database.`
+            : 'Credentials are valid and available.',
+      },
+      'Credential status checked successfully'
+    )
+  );
+});
+
 module.exports = {
   registerAdmin,
   verifyAdminOtp,
@@ -289,4 +370,5 @@ module.exports = {
   registerParent,
   loginUser,
   getCurrentUser,
+  checkCredentialAvailability,
 };

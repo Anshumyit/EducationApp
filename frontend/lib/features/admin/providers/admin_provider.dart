@@ -76,35 +76,134 @@ class AdminNotifier extends StateNotifier<AdminState> {
   Future<void> loadDashboard() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final statsRes = await _dio.get(ApiConstants.adminStats);
-      final teachersRes = await _dio.get(ApiConstants.adminTeachers);
-      final approvalsRes = await _dio.get(ApiConstants.adminApprovals);
-      final classesRes = await _dio.get(ApiConstants.adminClasses);
+      final results = await Future.wait([
+        _dio.get(ApiConstants.adminStats),
+        _dio.get(ApiConstants.adminTeachers),
+        _dio.get(ApiConstants.adminApprovals),
+        _dio.get(ApiConstants.adminClasses),
+      ]);
 
       state = state.copyWith(
         isLoading: false,
-        stats: statsRes.data['data'],
-        teachers: teachersRes.data['data'] ?? [],
-        pendingApprovals: approvalsRes.data['data'] ?? [],
-        classes: classesRes.data['data'] ?? [],
+        stats: results[0].data['data'],
+        teachers: results[1].data['data'] ?? [],
+        pendingApprovals: results[2].data['data'] ?? [],
+        classes: results[3].data['data'] ?? [],
       );
     } on DioException catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.error?.toString());
     }
   }
 
-  // 1. Approvals
+  // Load pending approvals specifically
+  Future<void> loadPendingApprovals() async {
+    try {
+      final approvalsRes = await _dio.get(ApiConstants.adminApprovals);
+      state = state.copyWith(
+        pendingApprovals: approvalsRes.data['data'] ?? [],
+      );
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+    }
+  }
+
+  // 1. Approvals with INSTANT OPTIMISTIC UI UPDATE (no refresh required)
   Future<bool> updateApprovalStatus(String userId, String status) async {
+    // 1. Snapshot previous state in case rollback is required
+    final previousPending = List<dynamic>.from(state.pendingApprovals);
+    final previousTeachers = List<dynamic>.from(state.teachers);
+    final previousStats = state.stats != null ? Map<String, dynamic>.from(state.stats!) : null;
+
+    final targetIndex = previousPending.indexWhere((u) => u['_id'] == userId);
+    final targetUser = targetIndex != -1 ? previousPending[targetIndex] : null;
+
+    // 2. SUDDEN UPDATE: Optimistically remove user from pendingApprovals immediately
+    final updatedPending = previousPending.where((u) => u['_id'] != userId).toList();
+
+    // 3. SUDDEN UPDATE: Update teachers directory immediately if role is TEACHER
+    List<dynamic> updatedTeachers = List<dynamic>.from(state.teachers);
+    if (status == 'APPROVED') {
+      if (targetUser != null && targetUser['role'] == 'TEACHER') {
+        final approvedUserObj = Map<String, dynamic>.from(targetUser);
+        approvedUserObj['status'] = 'APPROVED';
+        final teacherIdx = updatedTeachers.indexWhere((t) => t['_id'] == userId);
+        if (teacherIdx != -1) {
+          updatedTeachers[teacherIdx] = approvedUserObj;
+        } else {
+          updatedTeachers.insert(0, approvedUserObj);
+        }
+      } else {
+        // In case teacher already in list with PENDING status
+        final teacherIdx = updatedTeachers.indexWhere((t) => t['_id'] == userId);
+        if (teacherIdx != -1) {
+          final teacherCopy = Map<String, dynamic>.from(updatedTeachers[teacherIdx]);
+          teacherCopy['status'] = 'APPROVED';
+          updatedTeachers[teacherIdx] = teacherCopy;
+        }
+      }
+    } else {
+      // REJECTED status
+      final teacherIdx = updatedTeachers.indexWhere((t) => t['_id'] == userId);
+      if (teacherIdx != -1) {
+        final teacherCopy = Map<String, dynamic>.from(updatedTeachers[teacherIdx]);
+        teacherCopy['status'] = 'REJECTED';
+        updatedTeachers[teacherIdx] = teacherCopy;
+      }
+    }
+
+    // 4. SUDDEN UPDATE: Decrement pending approvals count immediately
+    Map<String, dynamic>? updatedStats;
+    if (state.stats != null) {
+      updatedStats = Map<String, dynamic>.from(state.stats!);
+      final currentPending = (updatedStats['pendingApprovals'] as num?)?.toInt() ?? 1;
+      updatedStats['pendingApprovals'] = (currentPending > 0) ? currentPending - 1 : 0;
+      if (status == 'APPROVED' && targetUser != null && targetUser['role'] == 'TEACHER') {
+        final currentTeachers = (updatedStats['totalTeachers'] as num?)?.toInt() ?? 0;
+        updatedStats['totalTeachers'] = currentTeachers + 1;
+      }
+    }
+
+    // Apply sudden optimistic update! The card vanishes & badges update at 0ms latency.
+    state = state.copyWith(
+      pendingApprovals: updatedPending,
+      teachers: updatedTeachers,
+      stats: updatedStats ?? state.stats,
+      clearError: true,
+    );
+
     try {
       await _dio.patch(
         '${ApiConstants.adminApprovals}/$userId',
         data: {'status': status},
       );
-      await loadDashboard();
+
+      // Re-sync quietly in background to confirm server state
+      _resyncApprovalsQuietly();
       return true;
     } on DioException catch (e) {
-      state = state.copyWith(errorMessage: e.error?.toString());
+      // Revert if API fails
+      state = state.copyWith(
+        pendingApprovals: previousPending,
+        teachers: previousTeachers,
+        stats: previousStats ?? state.stats,
+        errorMessage: e.error?.toString() ?? 'Failed to update approval status',
+      );
       return false;
+    }
+  }
+
+  Future<void> _resyncApprovalsQuietly() async {
+    try {
+      final approvalsRes = await _dio.get(ApiConstants.adminApprovals);
+      final statsRes = await _dio.get(ApiConstants.adminStats);
+      final teachersRes = await _dio.get(ApiConstants.adminTeachers);
+      state = state.copyWith(
+        pendingApprovals: approvalsRes.data['data'] ?? [],
+        stats: statsRes.data['data'] ?? state.stats,
+        teachers: teachersRes.data['data'] ?? state.teachers,
+      );
+    } catch (_) {
+      // Quiet background sync ignore
     }
   }
 
@@ -344,7 +443,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
           if (examTitle != null) 'examTitle': examTitle,
           if (examType != null) 'examType': examType,
           if (classId != null) 'classId': classId,
-        }..removeWhere((k, v) => v == null),
+        },
       );
       await loadExamsOverview();
       return true;

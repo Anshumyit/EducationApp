@@ -16,6 +16,7 @@ class FeeManagementScreen extends ConsumerWidget {
   void _showPaymentDialog(BuildContext context, WidgetRef ref, dynamic feeRecord) {
     final remainingDue = (feeRecord['totalAmount'] ?? 0) - (feeRecord['paidAmount'] ?? 0);
     final amountController = TextEditingController(text: remainingDue.toString());
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -24,69 +25,101 @@ class FeeManagementScreen extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 24,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Online Fee Installment',
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Paying for ${feeRecord['title'] ?? 'School Tuition'}',
-              style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 20),
-            CustomTextField(
-              controller: amountController,
-              label: 'Payment Amount (₹)',
-              keyboardType: TextInputType.number,
-              prefixIcon: Icons.currency_rupee_rounded,
-            ),
-            const SizedBox(height: 16),
-            GlassCard(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  const Icon(Icons.security_rounded, size: 20, color: AppColors.emerald),
-                  const SizedBox(width: 10),
-                  Text(
-                    '256-bit encrypted secure educational gateway',
-                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
-                  ),
-                ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final mediaQuery = MediaQuery.of(ctx);
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: mediaQuery.viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Online Fee Installment',
+                      style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Paying for ${feeRecord['title'] ?? 'School Tuition'}',
+                      style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 20),
+                    CustomTextField(
+                      controller: amountController,
+                      label: 'Payment Amount (₹)',
+                      keyboardType: TextInputType.number,
+                      prefixIcon: Icons.currency_rupee_rounded,
+                    ),
+                    const SizedBox(height: 16),
+                    GlassCard(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.security_rounded, size: 20, color: AppColors.emerald),
+                          const SizedBox(width: 10),
+                          Text(
+                            '256-bit encrypted secure educational gateway',
+                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    CustomButton(
+                      text: 'Confirm & Pay Installment',
+                      icon: Icons.lock_outline_rounded,
+                      isLoading: isSubmitting,
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final amount = double.tryParse(amountController.text) ?? 0;
+                              if (amount <= 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please enter a valid payment amount'),
+                                    backgroundColor: AppColors.rose,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setModalState(() => isSubmitting = true);
+
+                              final ok = await ref.read(parentProvider.notifier).payFee(feeRecord['_id'], amount);
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              if (context.mounted) {
+                                if (ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: AppColors.emerald,
+                                      content: Text('Payment of ₹$amount successful & receipt generated! 💳'),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      backgroundColor: AppColors.rose,
+                                      content: Text('Payment transaction could not be processed'),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-            CustomButton(
-              text: 'Confirm & Pay Installment',
-              icon: Icons.lock_outline_rounded,
-              onPressed: () async {
-                final amount = double.tryParse(amountController.text) ?? 0;
-                if (amount <= 0) return;
-
-                final ok = await ref.read(parentProvider.notifier).payFee(feeRecord['_id'], amount);
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (context.mounted && ok) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: AppColors.emerald,
-                      content: Text('Payment of ₹$amount successful & receipt generated! 💳'),
-                    ),
-                  );
-                }
-              },
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

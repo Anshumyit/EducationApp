@@ -42,6 +42,8 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> wit
     final emailCtrl = TextEditingController(text: settings?['email'] ?? 'admin@school.com');
     final sessionCtrl = TextEditingController(text: settings?['currentSession'] ?? '2026-2027');
 
+    bool isSubmitting = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -49,67 +51,99 @@ class _SchoolSettingsScreenState extends ConsumerState<SchoolSettingsScreen> wit
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 24,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Edit Institution Profile',
-                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final mediaQuery = MediaQuery.of(ctx);
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 24,
+                bottom: mediaQuery.viewInsets.bottom + 20,
               ),
-              const SizedBox(height: 16),
-              CustomTextField(controller: nameCtrl, label: 'Institution Name'),
-              const SizedBox(height: 12),
-              CustomTextField(controller: codeCtrl, label: 'Affiliation / Registration Code'),
-              const SizedBox(height: 12),
-              CustomTextField(controller: addrCtrl, label: 'Campus Address'),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: CustomTextField(controller: phoneCtrl, label: 'Contact Phone')),
-                  const SizedBox(width: 12),
-                  Expanded(child: CustomTextField(controller: sessionCtrl, label: 'Academic Session')),
-                ],
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(controller: emailCtrl, label: 'Official Email'),
-              const SizedBox(height: 20),
-              CustomButton(
-                text: 'Save Institution Settings',
-                onPressed: () async {
-                  final ok = await ref.read(adminProvider.notifier).updateSchoolSettings({
-                    'schoolName': nameCtrl.text.trim(),
-                    'affiliationCode': codeCtrl.text.trim(),
-                    'address': addrCtrl.text.trim(),
-                    'phone': phoneCtrl.text.trim(),
-                    'email': emailCtrl.text.trim(),
-                    'currentSession': sessionCtrl.text.trim(),
-                  });
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Edit Institution Profile',
+                      style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(controller: nameCtrl, label: 'Institution Name'),
+                    const SizedBox(height: 12),
+                    CustomTextField(controller: codeCtrl, label: 'Affiliation / Registration Code'),
+                    const SizedBox(height: 12),
+                    CustomTextField(controller: addrCtrl, label: 'Campus Address'),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: CustomTextField(controller: phoneCtrl, label: 'Contact Phone')),
+                        const SizedBox(width: 12),
+                        Expanded(child: CustomTextField(controller: sessionCtrl, label: 'Academic Session')),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(controller: emailCtrl, label: 'Official Email'),
+                    const SizedBox(height: 20),
+                    CustomButton(
+                      text: 'Save Institution Settings',
+                      isLoading: isSubmitting,
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              if (nameCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please enter an institution name'),
+                                    backgroundColor: AppColors.rose,
+                                  ),
+                                );
+                                return;
+                              }
 
-                  if (mounted) {
-                    Navigator.pop(ctx);
-                    if (ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Institution profile updated successfully!'),
-                          backgroundColor: AppColors.emerald,
-                        ),
-                      );
-                    }
-                  }
-                },
+                              setModalState(() => isSubmitting = true);
+
+                              final ok = await ref.read(adminProvider.notifier).updateSchoolSettings({
+                                'schoolName': nameCtrl.text.trim(),
+                                'affiliationCode': codeCtrl.text.trim(),
+                                'address': addrCtrl.text.trim(),
+                                'phone': phoneCtrl.text.trim(),
+                                'email': emailCtrl.text.trim(),
+                                'currentSession': sessionCtrl.text.trim(),
+                              });
+
+                              if (mounted) {
+                                Navigator.pop(ctx);
+                                if (ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Institution profile updated successfully!'),
+                                      backgroundColor: AppColors.emerald,
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        ref.read(adminProvider).errorMessage ?? 'Failed to update settings',
+                                      ),
+                                      backgroundColor: AppColors.rose,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

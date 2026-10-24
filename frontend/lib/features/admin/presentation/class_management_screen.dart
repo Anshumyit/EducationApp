@@ -30,6 +30,7 @@ class _ClassManagementScreenState extends ConsumerState<ClassManagementScreen> {
     final sectionCtrl = TextEditingController(text: 'A');
     final roomCtrl = TextEditingController(text: 'Room 301');
     final capacityCtrl = TextEditingController(text: '40');
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -38,88 +39,111 @@ class _ClassManagementScreenState extends ConsumerState<ClassManagementScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 24,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Create Class & Section',
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final mediaQuery = MediaQuery.of(ctx);
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 24,
+                bottom: mediaQuery.viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Create Class & Section',
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Supports Nursery, LKG, UKG, Class 1 to Class 12 with sections (A, B, C)',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 20),
+                    CustomTextField(
+                      controller: nameCtrl,
+                      label: 'Class Name (e.g. Nursery, Class 9, Class 12)',
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(controller: sectionCtrl, label: 'Section (e.g. A, B, C)'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: CustomTextField(controller: roomCtrl, label: 'Room Number'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: capacityCtrl,
+                      label: 'Student Capacity',
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 20),
+                    CustomButton(
+                      text: 'Create Class',
+                      isLoading: isSubmitting,
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              if (nameCtrl.text.trim().isEmpty || sectionCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please fill class name and section'),
+                                    backgroundColor: AppColors.rose,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setModalState(() => isSubmitting = true);
+
+                              final ok = await ref.read(adminProvider.notifier).createClassRoom({
+                                'name': nameCtrl.text.trim(),
+                                'section': sectionCtrl.text.trim().toUpperCase(),
+                                'roomNumber': roomCtrl.text.trim(),
+                                'capacity': int.tryParse(capacityCtrl.text.trim()) ?? 40,
+                              });
+
+                              if (mounted) {
+                                Navigator.pop(ctx);
+                                if (ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Class & Section created successfully!'),
+                                      backgroundColor: AppColors.emerald,
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(ref.read(adminProvider).errorMessage ?? 'Failed to create class'),
+                                      backgroundColor: AppColors.rose,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Supports Nursery, LKG, UKG, Class 1 to Class 12 with sections (A, B, C)',
-                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 20),
-              CustomTextField(
-                controller: nameCtrl,
-                label: 'Class Name (e.g. Nursery, Class 9, Class 12)',
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(controller: sectionCtrl, label: 'Section (e.g. A, B, C)'),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomTextField(controller: roomCtrl, label: 'Room Number'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: capacityCtrl,
-                label: 'Student Capacity',
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 20),
-              CustomButton(
-                text: 'Create Class',
-                onPressed: () async {
-                  if (nameCtrl.text.trim().isEmpty || sectionCtrl.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please fill class name and section')),
-                    );
-                    return;
-                  }
-
-                  final ok = await ref.read(adminProvider.notifier).createClassRoom({
-                    'name': nameCtrl.text.trim(),
-                    'section': sectionCtrl.text.trim().toUpperCase(),
-                    'roomNumber': roomCtrl.text.trim(),
-                    'capacity': int.tryParse(capacityCtrl.text.trim()) ?? 40,
-                  });
-
-                  if (mounted) {
-                    Navigator.pop(ctx);
-                    if (ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Class & Section created successfully!'),
-                          backgroundColor: AppColors.emerald,
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -189,13 +213,22 @@ class _ClassManagementScreenState extends ConsumerState<ClassManagementScreen> {
                       classroom['_id'],
                       selectedTeacher!,
                     );
-                if (mounted && ok) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Class teacher assigned successfully!'),
-                      backgroundColor: AppColors.emerald,
-                    ),
-                  );
+                if (mounted) {
+                  if (ok) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Class teacher assigned successfully!'),
+                        backgroundColor: AppColors.emerald,
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(ref.read(adminProvider).errorMessage ?? 'Failed to assign class teacher'),
+                        backgroundColor: AppColors.rose,
+                      ),
+                    );
+                  }
                 }
               },
               child: const Text('Assign', style: TextStyle(color: Colors.white)),
@@ -216,76 +249,86 @@ class _ClassManagementScreenState extends ConsumerState<ClassManagementScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              '${classroom['name']} - ${classroom['section']} Curriculum & Schedule',
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Standard academic timetable & subject periods',
-              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Assigned Subjects (${subjects.length}):',
-              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: (subjects.isNotEmpty
-                      ? subjects.map((s) => s['name'].toString()).toList()
-                      : ['Mathematics', 'English', 'Science', 'Social Studies', 'Hindi'])
-                  .map(
-                    (s) => Chip(
-                      backgroundColor: AppColors.surfaceVariant,
-                      label: Text(s, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textPrimary)),
-                    ),
-                  )
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Daily Period Schedule (Sample):',
-              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
-            ),
-            const SizedBox(height: 8),
-            ...[
-              {'period': 'Period 1 (08:30 - 09:15)', 'subject': 'Mathematics'},
-              {'period': 'Period 2 (09:15 - 10:00)', 'subject': 'Physics / Science'},
-              {'period': 'Period 3 (10:00 - 10:45)', 'subject': 'English Literature'},
-              {'period': 'Recess (10:45 - 11:15)', 'subject': 'Lunch Break 🥪'},
-              {'period': 'Period 4 (11:15 - 12:00)', 'subject': 'Social Studies / History'},
-              {'period': 'Period 5 (12:00 - 12:45)', 'subject': 'Computer Science / Lab'},
-            ].map(
-              (p) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(p['period']!, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
-                    Text(p['subject']!, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                  ],
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '${classroom['name']} - ${classroom['section']} Curriculum & Schedule',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                Text(
+                  'Standard academic timetable & subject periods',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Assigned Subjects (${subjects.length}):',
+                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: (subjects.isNotEmpty
+                          ? subjects.map((s) => s['name'].toString()).toList()
+                          : ['Mathematics', 'English', 'Science', 'Social Studies', 'Hindi'])
+                      .map(
+                        (s) => Chip(
+                          backgroundColor: AppColors.surfaceVariant,
+                          label: Text(s, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textPrimary)),
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Daily Period Schedule (Sample):',
+                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+                const SizedBox(height: 8),
+                ...[
+                  {'period': 'Period 1 (08:30 - 09:15)', 'subject': 'Mathematics'},
+                  {'period': 'Period 2 (09:15 - 10:00)', 'subject': 'Physics / Science'},
+                  {'period': 'Period 3 (10:00 - 10:45)', 'subject': 'English Literature'},
+                  {'period': 'Recess (10:45 - 11:15)', 'subject': 'Lunch Break 🥪'},
+                  {'period': 'Period 4 (11:15 - 12:00)', 'subject': 'Social Studies / History'},
+                  {'period': 'Period 5 (12:00 - 12:45)', 'subject': 'Computer Science / Lab'},
+                ].map(
+                  (p) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(p['period']!, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
+                        Text(p['subject']!, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                CustomButton(
+                  text: 'Done',
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            CustomButton(
-              text: 'Done',
-              onPressed: () => Navigator.pop(ctx),
-            ),
-          ],
+          ),
         ),
       ),
     );

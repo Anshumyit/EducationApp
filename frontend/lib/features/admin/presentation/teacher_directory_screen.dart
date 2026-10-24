@@ -19,6 +19,7 @@ class TeacherDirectoryScreen extends ConsumerWidget {
     final hraController = TextEditingController(text: '8000');
     final daController = TextEditingController(text: '3000');
     final pfController = TextEditingController(text: '3500');
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -27,118 +28,142 @@ class TeacherDirectoryScreen extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 24,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Generate Salary Slip',
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final mediaQuery = MediaQuery.of(ctx);
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: mediaQuery.viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Generate Salary Slip',
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Generating pay slip for ${teacher['name']}',
+                      style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(controller: monthController, label: 'Month'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: CustomTextField(
+                            controller: yearController,
+                            label: 'Year',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: basicController,
+                      label: 'Basic Salary (₹)',
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(
+                            controller: hraController,
+                            label: 'HRA (₹)',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: CustomTextField(
+                            controller: daController,
+                            label: 'DA (₹)',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: pfController,
+                      label: 'PF Deduction (₹)',
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 24),
+                    CustomButton(
+                      text: 'Issue Salary Slip & Notify Teacher',
+                      icon: Icons.receipt_long_rounded,
+                      isLoading: isSubmitting,
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              setModalState(() => isSubmitting = true);
+                              final ok = await ref.read(adminProvider.notifier).generateSalarySlip(
+                                    teacherId: teacher['_id'],
+                                    month: monthController.text.trim(),
+                                    year: int.tryParse(yearController.text) ?? 2026,
+                                    basicSalary: double.tryParse(basicController.text) ?? 50000,
+                                    hra: double.tryParse(hraController.text) ?? 0,
+                                    da: double.tryParse(daController.text) ?? 0,
+                                    pfDeduction: double.tryParse(pfController.text) ?? 0,
+                                  );
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              if (context.mounted) {
+                                if (ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: AppColors.emerald,
+                                      content: Text('Salary slip issued for ${teacher['name']}!'),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: AppColors.rose,
+                                      content: Text(
+                                        ref.read(adminProvider).errorMessage ?? 'Failed to issue salary slip',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Generating pay slip for ${teacher['name']}',
-                style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(controller: monthController, label: 'Month'),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomTextField(
-                      controller: yearController,
-                      label: 'Year',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: basicController,
-                label: 'Basic Salary (₹)',
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      controller: hraController,
-                      label: 'HRA (₹)',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomTextField(
-                      controller: daController,
-                      label: 'DA (₹)',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: pfController,
-                label: 'PF Deduction (₹)',
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 24),
-              CustomButton(
-                text: 'Issue Salary Slip & Notify Teacher',
-                icon: Icons.receipt_long_rounded,
-                onPressed: () async {
-                  final ok = await ref.read(adminProvider.notifier).generateSalarySlip(
-                        teacherId: teacher['_id'],
-                        month: monthController.text.trim(),
-                        year: int.tryParse(yearController.text) ?? 2026,
-                        basicSalary: double.tryParse(basicController.text) ?? 50000,
-                        hra: double.tryParse(hraController.text) ?? 0,
-                        da: double.tryParse(daController.text) ?? 0,
-                        pfDeduction: double.tryParse(pfController.text) ?? 0,
-                      );
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  if (context.mounted && ok) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: AppColors.emerald,
-                        content: Text('Salary slip issued for ${teacher['name']}!'),
-                      ),
-                    );
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
   void _showAddTeacherDialog(BuildContext context, WidgetRef ref) {
-    final nameCtrl = TextEditingController();
-    final emailCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
+    final nameCtrl = TextEditingController(text: 'Dr. Vivek Sharma');
+    final emailCtrl = TextEditingController(text: 'vivek.teacher@school.com');
+    final phoneCtrl = TextEditingController(text: '+91 98765 12340');
     final subjectsCtrl = TextEditingController(text: 'Mathematics, Science');
     final qualCtrl = TextEditingController(text: 'M.Sc, B.Ed');
     final salaryCtrl = TextEditingController(text: '55000');
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -147,78 +172,108 @@ class TeacherDirectoryScreen extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 24,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Add Faculty / Staff Profile',
-                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final mediaQuery = MediaQuery.of(ctx);
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 24,
+                bottom: mediaQuery.viewInsets.bottom + 20,
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Register teaching faculty with qualification and salary records',
-                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 18),
-              CustomTextField(controller: nameCtrl, label: 'Faculty Name'),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: CustomTextField(controller: emailCtrl, label: 'Email Address')),
-                  const SizedBox(width: 12),
-                  Expanded(child: CustomTextField(controller: phoneCtrl, label: 'Phone Number')),
-                ],
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(controller: subjectsCtrl, label: 'Subjects (comma-separated)'),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: CustomTextField(controller: qualCtrl, label: 'Highest Qualification')),
-                  const SizedBox(width: 12),
-                  Expanded(child: CustomTextField(controller: salaryCtrl, label: 'Monthly Salary (₹)', keyboardType: TextInputType.number)),
-                ],
-              ),
-              const SizedBox(height: 20),
-              CustomButton(
-                text: 'Add Faculty Member',
-                onPressed: () async {
-                  if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) return;
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Add Faculty / Staff Profile',
+                      style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Register teaching faculty with qualification and salary records',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 18),
+                    CustomTextField(controller: nameCtrl, label: 'Faculty Name'),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: CustomTextField(controller: emailCtrl, label: 'Email Address')),
+                        const SizedBox(width: 12),
+                        Expanded(child: CustomTextField(controller: phoneCtrl, label: 'Phone Number')),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(controller: subjectsCtrl, label: 'Subjects (comma-separated)'),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: CustomTextField(controller: qualCtrl, label: 'Highest Qualification')),
+                        const SizedBox(width: 12),
+                        Expanded(child: CustomTextField(controller: salaryCtrl, label: 'Monthly Salary (₹)', keyboardType: TextInputType.number)),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    CustomButton(
+                      text: 'Add Faculty Member',
+                      isLoading: isSubmitting,
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please enter faculty name and email address'),
+                                    backgroundColor: AppColors.rose,
+                                  ),
+                                );
+                                return;
+                              }
 
-                  final ok = await ref.read(adminProvider.notifier).createTeacher({
-                    'name': nameCtrl.text.trim(),
-                    'email': emailCtrl.text.trim(),
-                    'phone': phoneCtrl.text.trim(),
-                    'subjects': subjectsCtrl.text.split(',').map((s) => s.trim()).toList(),
-                    'qualification': qualCtrl.text.trim(),
-                    'salary': double.tryParse(salaryCtrl.text.trim()) ?? 50000,
-                  });
+                              setModalState(() => isSubmitting = true);
 
-                  if (context.mounted) {
-                    Navigator.pop(ctx);
-                    if (ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Faculty profile created successfully!'),
-                          backgroundColor: AppColors.emerald,
-                        ),
-                      );
-                    }
-                  }
-                },
+                              final ok = await ref.read(adminProvider.notifier).createTeacher({
+                                'name': nameCtrl.text.trim(),
+                                'email': emailCtrl.text.trim(),
+                                'phone': phoneCtrl.text.trim().isNotEmpty ? phoneCtrl.text.trim() : '+91 9876543210',
+                                'subjects': subjectsCtrl.text.split(',').map((s) => s.trim()).toList(),
+                                'qualification': qualCtrl.text.trim(),
+                                'salary': double.tryParse(salaryCtrl.text.trim()) ?? 55000,
+                              });
+
+                              if (context.mounted) {
+                                Navigator.pop(ctx);
+                                if (ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Faculty profile created successfully!'),
+                                      backgroundColor: AppColors.emerald,
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        ref.read(adminProvider).errorMessage ?? 'Failed to add faculty member',
+                                      ),
+                                      backgroundColor: AppColors.rose,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -388,14 +443,53 @@ class TeacherDirectoryScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 16),
 
-                        // Salary Action
-                        CustomButton(
-                          text: 'Issue Salary Slip',
-                          icon: Icons.payments_outlined,
-                          isOutlined: true,
-                          height: 42,
-                          onPressed: () => _showSalarySlipDialog(context, ref, t),
-                        ),
+                        if (t['status'] == 'PENDING') ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CustomButton(
+                                  text: 'Approve Faculty',
+                                  icon: Icons.check_circle_rounded,
+                                  color: AppColors.emerald,
+                                  height: 42,
+                                  onPressed: () async {
+                                    final ok = await ref
+                                        .read(adminProvider.notifier)
+                                        .updateApprovalStatus(t['_id'], 'APPROVED');
+                                    if (context.mounted && ok) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: AppColors.emerald,
+                                          behavior: SnackBarBehavior.floating,
+                                          content: Text('${t['name']} has been approved!'),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: CustomButton(
+                                  text: 'Issue Slip',
+                                  icon: Icons.payments_outlined,
+                                  isOutlined: true,
+                                  height: 42,
+                                  onPressed: () => _showSalarySlipDialog(context, ref, t),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ] else ...[
+                          // Salary Action
+                          CustomButton(
+                            text: 'Issue Salary Slip',
+                            icon: Icons.payments_outlined,
+                            isOutlined: true,
+                            height: 42,
+                            onPressed: () => _showSalarySlipDialog(context, ref, t),
+                          ),
+                        ],
                       ],
                     ),
                   );

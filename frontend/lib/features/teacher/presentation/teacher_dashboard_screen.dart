@@ -10,11 +10,15 @@ import '../../auth/providers/auth_provider.dart';
 import '../providers/teacher_provider.dart';
 import 'attendance_report_screen.dart';
 import 'create_homework_screen.dart';
+import 'daily_syllabus_tracker_screen.dart';
+import 'homework_management_screen.dart';
 import 'leave_approval_screen.dart';
 import 'mark_attendance_screen.dart';
 import 'marks_entry_screen.dart';
+import 'parent_communication_hub_screen.dart';
 import 'student_list_screen.dart';
 import 'teacher_salary_screen.dart';
+
 
 class TeacherDashboardScreen extends ConsumerStatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -36,6 +40,8 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
     final titleController = TextEditingController();
     final messageController = TextEditingController();
 
+    bool isSubmitting = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -43,63 +49,99 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 24,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Instant Class Notice to Parents',
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Send real-time alert to all parents of your assigned class',
-              style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 20),
-            CustomTextField(
-              controller: titleController,
-              label: 'Notice Title',
-              hint: 'e.g. Science Fair Project Submissions',
-              prefixIcon: Icons.campaign_rounded,
-            ),
-            const SizedBox(height: 14),
-            CustomTextField(
-              controller: messageController,
-              label: 'Notice Message',
-              hint: 'Write announcement details...',
-              prefixIcon: Icons.edit_note_rounded,
-              maxLines: 3,
-            ),
-            const SizedBox(height: 20),
-            CustomButton(
-              text: 'Send Instant Notice',
-              icon: Icons.send_rounded,
-              onPressed: () async {
-                final ok = await ref.read(teacherProvider.notifier).sendNotice(
-                      title: titleController.text.trim(),
-                      message: messageController.text.trim(),
-                    );
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (context.mounted && ok) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      backgroundColor: AppColors.emerald,
-                      content: Text('Notice sent to class parents! 📢'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final mediaQuery = MediaQuery.of(ctx);
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: mediaQuery.viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Instant Class Notice to Parents',
+                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                     ),
-                  );
-                }
-              },
+                    const SizedBox(height: 4),
+                    Text(
+                      'Send real-time alert to all parents of your assigned class',
+                      style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 20),
+                    CustomTextField(
+                      controller: titleController,
+                      label: 'Notice Title',
+                      hint: 'e.g. Science Fair Project Submissions',
+                      prefixIcon: Icons.campaign_rounded,
+                    ),
+                    const SizedBox(height: 14),
+                    CustomTextField(
+                      controller: messageController,
+                      label: 'Notice Message',
+                      hint: 'Write announcement details...',
+                      prefixIcon: Icons.edit_note_rounded,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 20),
+                    CustomButton(
+                      text: 'Send Instant Notice',
+                      icon: Icons.send_rounded,
+                      isLoading: isSubmitting,
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              if (titleController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please enter notice title and message'),
+                                    backgroundColor: AppColors.rose,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setModalState(() => isSubmitting = true);
+
+                              final ok = await ref.read(teacherProvider.notifier).sendNotice(
+                                    title: titleController.text.trim(),
+                                    message: messageController.text.trim(),
+                                  );
+
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              if (mounted) {
+                                if (ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      backgroundColor: AppColors.emerald,
+                                      content: Text('Notice sent to class parents! 📢'),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      backgroundColor: AppColors.rose,
+                                      content: Text('Failed to dispatch class notice'),
+                                    ),
+                                  );
+                                }
+                              }
+
+                            },
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -283,21 +325,47 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                     ),
                     const Divider(color: AppColors.border, height: 1),
                     _buildHubTile(
-                      icon: Icons.menu_book_rounded,
-                      color: AppColors.purple,
-                      title: 'Assign Homework & Deadlines',
-                      subtitle: 'Subject-wise assignments with automatic parent push',
+                      icon: Icons.track_changes_rounded,
+                      color: AppColors.amber,
+                      title: 'Daily Syllabus & Target Tracker',
+                      subtitle: 'Topic, target, % completion, duration & study materials',
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const CreateHomeworkScreen()),
+                          MaterialPageRoute(builder: (_) => const DailySyllabusTrackerScreen()),
+                        );
+                      },
+                    ),
+                    const Divider(color: AppColors.border, height: 1),
+                    _buildHubTile(
+                      icon: Icons.menu_book_rounded,
+                      color: AppColors.purple,
+                      title: 'Homework & Assignment Hub',
+                      subtitle: 'Create homework, check submissions, grade marks & feedback',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const HomeworkManagementScreen()),
+                        );
+                      },
+                    ),
+                    const Divider(color: AppColors.border, height: 1),
+                    _buildHubTile(
+                      icon: Icons.forum_rounded,
+                      color: AppColors.accent,
+                      title: 'Parent Communication Hub',
+                      subtitle: '1-on-1 messages, PTM meetings, progress sharing & inquiry replies',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ParentCommunicationHubScreen()),
                         );
                       },
                     ),
                     const Divider(color: AppColors.border, height: 1),
                     _buildHubTile(
                       icon: Icons.person_search_rounded,
-                      color: AppColors.accent,
+                      color: AppColors.primaryLight,
                       title: 'Class Student Directory',
                       subtitle: 'View all student profiles, parent info & contacts',
                       onTap: () {
@@ -330,6 +398,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                       onTap: _showNoticeDialog,
                     ),
                     const Divider(color: AppColors.border, height: 1),
+
                     _buildHubTile(
                       icon: Icons.payments_rounded,
                       color: AppColors.emerald,

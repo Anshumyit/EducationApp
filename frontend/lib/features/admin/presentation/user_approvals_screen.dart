@@ -8,11 +8,94 @@ import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../providers/admin_provider.dart';
 
-class UserApprovalsScreen extends ConsumerWidget {
+class UserApprovalsScreen extends ConsumerStatefulWidget {
   const UserApprovalsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UserApprovalsScreen> createState() => _UserApprovalsScreenState();
+}
+
+class _UserApprovalsScreenState extends ConsumerState<UserApprovalsScreen> {
+  final Set<String> _processingUserIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Automatically load latest pending registrations whenever this screen is opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adminProvider.notifier).loadPendingApprovals();
+    });
+  }
+
+  Future<void> _handleApproval(dynamic user, String status) async {
+    final userId = user['_id']?.toString() ?? '';
+    if (userId.isEmpty || _processingUserIds.contains(userId)) return;
+
+    setState(() {
+      _processingUserIds.add(userId);
+    });
+
+    final userName = user['name'] ?? 'User';
+    final isApproved = status == 'APPROVED';
+
+    final success = await ref
+        .read(adminProvider.notifier)
+        .updateApprovalStatus(userId, status);
+
+    if (!mounted) return;
+
+    setState(() {
+      _processingUserIds.remove(userId);
+    });
+
+    if (success) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: isApproved ? AppColors.emerald : AppColors.rose,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 4),
+          content: Row(
+            children: [
+              Icon(
+                isApproved ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  isApproved
+                      ? '$userName has been approved! Account is now active.'
+                      : '$userName registration has been rejected.',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      final error = ref.read(adminProvider).errorMessage;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.rose,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Text(error ?? 'Failed to update user status'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final adminState = ref.watch(adminProvider);
     final pendingUsers = adminState.pendingApprovals;
 
@@ -28,15 +111,17 @@ class UserApprovalsScreen extends ConsumerWidget {
               description: 'There are no pending registrations waiting for administrative approval.',
             )
           : RefreshIndicator(
-              onRefresh: () => ref.read(adminProvider.notifier).loadDashboard(),
+              onRefresh: () => ref.read(adminProvider.notifier).loadPendingApprovals(),
               child: ListView.separated(
                 padding: const EdgeInsets.all(20),
                 itemCount: pendingUsers.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 16),
                 itemBuilder: (context, index) {
                   final user = pendingUsers[index];
+                  final userId = user['_id']?.toString() ?? '';
                   final isTeacher = user['role'] == 'TEACHER';
                   final subjects = user['subjects'] as List<dynamic>? ?? [];
+                  final isBusy = _processingUserIds.contains(userId);
 
                   return GlassCard(
                     padding: const EdgeInsets.all(18),
@@ -145,19 +230,8 @@ class UserApprovalsScreen extends ConsumerWidget {
                                 icon: Icons.check_circle_rounded,
                                 color: AppColors.emerald,
                                 height: 44,
-                                onPressed: () async {
-                                  final ok = await ref
-                                      .read(adminProvider.notifier)
-                                      .updateApprovalStatus(user['_id'], 'APPROVED');
-                                  if (context.mounted && ok) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        backgroundColor: AppColors.emerald,
-                                        content: Text('${user['name']} has been approved!'),
-                                      ),
-                                    );
-                                  }
-                                },
+                                isLoading: isBusy,
+                                onPressed: isBusy ? null : () => _handleApproval(user, 'APPROVED'),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -168,19 +242,7 @@ class UserApprovalsScreen extends ConsumerWidget {
                                 color: AppColors.rose,
                                 isOutlined: true,
                                 height: 44,
-                                onPressed: () async {
-                                  final ok = await ref
-                                      .read(adminProvider.notifier)
-                                      .updateApprovalStatus(user['_id'], 'REJECTED');
-                                  if (context.mounted && ok) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        backgroundColor: AppColors.rose,
-                                        content: Text('${user['name']} has been rejected.'),
-                                      ),
-                                    );
-                                  }
-                                },
+                                onPressed: isBusy ? null : () => _handleApproval(user, 'REJECTED'),
                               ),
                             ),
                           ],

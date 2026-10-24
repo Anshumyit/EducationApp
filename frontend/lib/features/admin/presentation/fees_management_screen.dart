@@ -45,6 +45,8 @@ class _FeesManagementScreenState extends ConsumerState<FeesManagementScreen> {
     final dueDateCtrl = TextEditingController(text: '2026-11-15');
     String selectedCategory = 'TUITION';
 
+    bool isSubmitting = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -53,124 +55,150 @@ class _FeesManagementScreenState extends ConsumerState<FeesManagementScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 24,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Generate Fee Invoices',
-                  style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Generate invoices for an entire class in 1 tap',
-                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 18),
-                // Class selection
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: selectedClass,
-                      isExpanded: true,
-                      dropdownColor: AppColors.surface,
-                      items: classes.map<DropdownMenuItem<String>>((c) {
-                        return DropdownMenuItem<String>(
-                          value: c['_id'],
-                          child: Text('${c['name']} - ${c['section']}', style: GoogleFonts.inter(color: AppColors.textPrimary)),
-                        );
-                      }).toList(),
-                      onChanged: (val) => setModalState(() => selectedClass = val),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Fee Category
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: selectedCategory,
-                      isExpanded: true,
-                      dropdownColor: AppColors.surface,
-                      items: ['TUITION', 'ADMISSION', 'TRANSPORT', 'EXAM', 'ANNUAL', 'OTHER'].map((cat) {
-                        return DropdownMenuItem(
-                          value: cat,
-                          child: Text('Category: $cat', style: GoogleFonts.inter(color: AppColors.textPrimary)),
-                        );
-                      }).toList(),
-                      onChanged: (val) => setModalState(() => selectedCategory = val!),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                CustomTextField(controller: titleCtrl, label: 'Invoice Title (e.g. Q3 Transport Fee)'),
-                const SizedBox(height: 12),
-                Row(
+        builder: (ctx, setModalState) {
+          final mediaQuery = MediaQuery.of(ctx);
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 24,
+                bottom: mediaQuery.viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: CustomTextField(
-                        controller: amountCtrl,
-                        label: 'Amount (₹)',
-                        keyboardType: TextInputType.number,
+                    Text(
+                      'Generate Fee Invoices',
+                      style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Generate invoices for an entire class in 1 tap',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 18),
+                    // Class selection
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedClass,
+                          isExpanded: true,
+                          dropdownColor: AppColors.surface,
+                          items: classes.map<DropdownMenuItem<String>>((c) {
+                            return DropdownMenuItem<String>(
+                              value: c['_id'],
+                              child: Text('${c['name']} - ${c['section']}', style: GoogleFonts.inter(color: AppColors.textPrimary)),
+                            );
+                          }).toList(),
+                          onChanged: (val) => setModalState(() => selectedClass = val),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: CustomTextField(controller: dueDateCtrl, label: 'Due Date (YYYY-MM-DD)'),
+                    const SizedBox(height: 12),
+                    // Fee Category
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedCategory,
+                          isExpanded: true,
+                          dropdownColor: AppColors.surface,
+                          items: ['TUITION', 'ADMISSION', 'TRANSPORT', 'EXAM', 'ANNUAL', 'OTHER'].map((cat) {
+                            return DropdownMenuItem(
+                              value: cat,
+                              child: Text('Category: $cat', style: GoogleFonts.inter(color: AppColors.textPrimary)),
+                            );
+                          }).toList(),
+                          onChanged: (val) => setModalState(() => selectedCategory = val!),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(controller: titleCtrl, label: 'Invoice Title (e.g. Q3 Transport Fee)'),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(
+                            controller: amountCtrl,
+                            label: 'Amount (₹)',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: CustomTextField(controller: dueDateCtrl, label: 'Due Date (YYYY-MM-DD)'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    CustomButton(
+                      text: 'Dispatch Invoices',
+                      isLoading: isSubmitting,
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              if (selectedClass == null || amountCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please select a class and enter the invoice amount'),
+                                    backgroundColor: AppColors.rose,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setModalState(() => isSubmitting = true);
+
+                              final ok = await ref.read(adminProvider.notifier).generateFeeInvoices({
+                                'classId': selectedClass,
+                                'title': titleCtrl.text.trim(),
+                                'feeCategory': selectedCategory,
+                                'totalAmount': double.tryParse(amountCtrl.text.trim()) ?? 0,
+                                'dueDate': dueDateCtrl.text.trim(),
+                              });
+
+                              if (mounted) {
+                                Navigator.pop(ctx);
+                                if (ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Class invoices dispatched and parents notified!'),
+                                      backgroundColor: AppColors.emerald,
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(ref.read(adminProvider).errorMessage ?? 'Failed to dispatch invoices'),
+                                      backgroundColor: AppColors.rose,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                CustomButton(
-                  text: 'Dispatch Invoices',
-                  onPressed: () async {
-                    if (selectedClass == null || amountCtrl.text.trim().isEmpty) return;
-
-                    final ok = await ref.read(adminProvider.notifier).generateFeeInvoices({
-                      'classId': selectedClass,
-                      'title': titleCtrl.text.trim(),
-                      'feeCategory': selectedCategory,
-                      'totalAmount': double.tryParse(amountCtrl.text.trim()) ?? 0,
-                      'dueDate': dueDateCtrl.text.trim(),
-                    });
-
-                    if (mounted) {
-                      Navigator.pop(ctx);
-                      if (ok) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Class invoices dispatched and parents notified!'),
-                            backgroundColor: AppColors.emerald,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

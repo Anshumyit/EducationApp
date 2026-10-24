@@ -14,8 +14,10 @@ const homeworkRoutes = require('./routes/homework.routes');
 const leaveRoutes = require('./routes/leave.routes');
 const feeRoutes = require('./routes/fee.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const communicationRoutes = require('./routes/communication.routes');
 
 const app = express();
+
 
 // Middlewares
 app.use(cors({ origin: '*', credentials: true }));
@@ -56,8 +58,10 @@ app.use('/api/v1/homework', homeworkRoutes);
 app.use('/api/v1/leave', leaveRoutes);
 app.use('/api/v1/fees', feeRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/communication', communicationRoutes);
 
 // Global Error Handler
+
 app.use(errorHandler);
 
 module.exports = app;

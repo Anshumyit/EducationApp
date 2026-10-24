@@ -65,9 +65,12 @@ class ApiConstants {
 
   // Teacher endpoints
   static const String teacherClassInfo = '/teacher/class-info';
+  static const String teacherClasses = '/teacher/classes';
   static const String teacherStudents = '/teacher/students';
   static const String teacherNotice = '/teacher/notice';
   static const String teacherSalarySlips = '/teacher/salary-slips';
+  static const String teacherSyllabusLogs = '/teacher/syllabus/daily-logs';
+  static const String teacherSyllabusOverview = '/teacher/syllabus/overview';
 
   // Attendance endpoints
   static const String markAttendance = '/attendance/mark';
@@ -82,6 +85,21 @@ class ApiConstants {
 
   // Homework endpoints
   static const String homework = '/homework';
+  static String classHomework(String classId) => '/homework/class/$classId';
+  static String homeworkSubmissions(String homeworkId) => '/homework/$homeworkId/submissions';
+  static String gradeHomework(String homeworkId, String studentId) => '/homework/$homeworkId/grade/$studentId';
+  static String submitHomework(String homeworkId) => '/homework/$homeworkId/submit';
+
+  // Communication & Parent Engagement
+  static const String directMessages = '/communication/messages';
+  static String conversation(String otherUserId) => '/communication/messages/$otherUserId';
+  static const String classAnnouncements = '/communication/announcements';
+  static String classAnnouncementsList(String classId) => '/communication/announcements/class/$classId';
+  static const String shareProgress = '/communication/progress/share';
+  static const String meetings = '/communication/meetings';
+  static String updateMeeting(String meetingId) => '/communication/meetings/$meetingId';
+  static const String parentQueries = '/communication/queries';
+  static String replyParentQuery(String queryId) => '/communication/queries/$queryId/reply';
 
   // Leave endpoints
   static const String submitLeave = '/leave/request';
@@ -101,3 +119,4 @@ class ApiConstants {
   // Notifications
   static const String myNotifications = '/notifications/my';
 }
+
