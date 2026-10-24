@@ -17,6 +17,7 @@ class AppColors {
   static const Color background = Color(0xFF0B1120);
   static const Color surface = Color(0xFF151F32);
   static const Color surfaceLight = Color(0xFF1E293B);
+  static const Color surfaceVariant = Color(0xFF1E293B);
   static const Color surfaceElevated = Color(0xFF27354E);
   static const Color card = Color(0xFF1B263B);
   static const Color border = Color(0xFF2E3D56);

@@ -11,6 +11,7 @@ const FeeRecord = require('../models/feeRecord.model');
 const SalarySlip = require('../models/salarySlip.model');
 const Holiday = require('../models/holiday.model');
 const Notification = require('../models/notification.model');
+const SchoolSetting = require('../models/schoolSetting.model');
 const { ROLES } = require('../constants/roles');
 const { USER_STATUS, ATTENDANCE_STATUS, EXAM_TYPES, LEAVE_STATUS } = require('../constants/status');
 
@@ -32,6 +33,7 @@ const seed = async () => {
       SalarySlip.deleteMany({}),
       Holiday.deleteMany({}),
       Notification.deleteMany({}),
+      SchoolSetting.deleteMany({}),
     ]);
     console.log('[Seed] Existing collections cleaned');
 
@@ -405,6 +407,60 @@ const seed = async () => {
         senderId: admin._id,
       },
     ]);
+
+    // 14. Create School Settings (Profile, Bus Fleet, Library Catalog)
+    await SchoolSetting.create({
+      schoolName: 'St. Xavier International Academy',
+      affiliationCode: 'CBSE-DEL-2026-9812',
+      address: 'Plot 14, Institutional Area, Sector 62, New Delhi',
+      phone: '+91 98765 43210',
+      email: 'admin@school.com',
+      currentSession: '2026-2027',
+      busRoutes: [
+        {
+          routeName: 'Route 1 - East Campus to Sector 62',
+          busNumber: 'DL-01-AB-1234',
+          driverName: 'Suraj Pal Singh',
+          driverPhone: '+91 98112 34567',
+          capacity: 40,
+          studentCount: 28,
+        },
+        {
+          routeName: 'Route 2 - South Extension Express',
+          busNumber: 'DL-01-CD-5678',
+          driverName: 'Manoj Kumar',
+          driverPhone: '+91 98223 45678',
+          capacity: 35,
+          studentCount: 22,
+        },
+      ],
+      libraryBooks: [
+        {
+          title: 'NCERT Exemplar Mathematics Class 10',
+          author: 'NCERT Council',
+          isbn: '978-81-7450-843-0',
+          category: 'Mathematics',
+          totalCopies: 25,
+          availableCopies: 18,
+        },
+        {
+          title: 'Concepts of Physics (Vol 1 & 2)',
+          author: 'Dr. H.C. Verma',
+          isbn: '978-81-7709-187-8',
+          category: 'Physics',
+          totalCopies: 20,
+          availableCopies: 14,
+        },
+        {
+          title: 'A Brief History of Time',
+          author: 'Stephen Hawking',
+          isbn: '978-05-5338-016-3',
+          category: 'Science & Astronomy',
+          totalCopies: 10,
+          availableCopies: 7,
+        },
+      ],
+    });
 
     console.log('====================================================');
     console.log('✅ DATABASE SEEDING COMPLETED SUCCESSFULLY!');

@@ -132,6 +132,97 @@ class TeacherDirectoryScreen extends ConsumerWidget {
     );
   }
 
+  void _showAddTeacherDialog(BuildContext context, WidgetRef ref) {
+    final nameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final subjectsCtrl = TextEditingController(text: 'Mathematics, Science');
+    final qualCtrl = TextEditingController(text: 'M.Sc, B.Ed');
+    final salaryCtrl = TextEditingController(text: '55000');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Add Faculty / Staff Profile',
+                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Register teaching faculty with qualification and salary records',
+                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 18),
+              CustomTextField(controller: nameCtrl, label: 'Faculty Name'),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: CustomTextField(controller: emailCtrl, label: 'Email Address')),
+                  const SizedBox(width: 12),
+                  Expanded(child: CustomTextField(controller: phoneCtrl, label: 'Phone Number')),
+                ],
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(controller: subjectsCtrl, label: 'Subjects (comma-separated)'),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: CustomTextField(controller: qualCtrl, label: 'Highest Qualification')),
+                  const SizedBox(width: 12),
+                  Expanded(child: CustomTextField(controller: salaryCtrl, label: 'Monthly Salary (₹)', keyboardType: TextInputType.number)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              CustomButton(
+                text: 'Add Faculty Member',
+                onPressed: () async {
+                  if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) return;
+
+                  final ok = await ref.read(adminProvider.notifier).createTeacher({
+                    'name': nameCtrl.text.trim(),
+                    'email': emailCtrl.text.trim(),
+                    'phone': phoneCtrl.text.trim(),
+                    'subjects': subjectsCtrl.text.split(',').map((s) => s.trim()).toList(),
+                    'qualification': qualCtrl.text.trim(),
+                    'salary': double.tryParse(salaryCtrl.text.trim()) ?? 50000,
+                  });
+
+                  if (context.mounted) {
+                    Navigator.pop(ctx);
+                    if (ok) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Faculty profile created successfully!'),
+                          backgroundColor: AppColors.emerald,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final adminState = ref.watch(adminProvider);
@@ -141,6 +232,12 @@ class TeacherDirectoryScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Faculty & Teacher Directory'),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.person_add_rounded, color: Colors.white),
+        label: Text('Add Teacher', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+        onPressed: () => _showAddTeacherDialog(context, ref),
       ),
       body: teachers.isEmpty
           ? const EmptyState(

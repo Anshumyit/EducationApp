@@ -45,6 +45,11 @@ const feeRecordSchema = new mongoose.Schema(
       required: true,
       trim: true, // e.g. "Term 1 Tuition Fee", "Annual Activity Fee"
     },
+    feeCategory: {
+      type: String,
+      enum: ['TUITION', 'ADMISSION', 'TRANSPORT', 'EXAM', 'ANNUAL', 'OTHER'],
+      default: 'TUITION',
+    },
     academicYear: {
       type: String,
       default: '2026-2027',

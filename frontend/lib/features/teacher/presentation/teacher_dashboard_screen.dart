@@ -184,6 +184,11 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
 
               const SizedBox(height: 18),
 
+              // Today's Attendance Live Status Card
+              _buildTodayAttendanceCard(teacherState, context),
+
+              const SizedBox(height: 18),
+
               // KPI Stats Grid
               Row(
                 children: [
@@ -242,7 +247,7 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                       icon: Icons.how_to_reg_rounded,
                       color: AppColors.emerald,
                       title: 'Mark Daily Attendance',
-                      subtitle: 'Record attendance & send instant parent alerts',
+                      subtitle: 'Record or update attendance & notify parents in real time',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -252,10 +257,10 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                     ),
                     const Divider(color: AppColors.border, height: 1),
                     _buildHubTile(
-                      icon: Icons.calendar_month_rounded,
+                      icon: Icons.receipt_long_rounded,
                       color: AppColors.accent,
-                      title: 'Monthly Attendance Reports',
-                      subtitle: 'Student-by-student & class-wide attendance sheets',
+                      title: 'Daily Attendance Log & Reports',
+                      subtitle: 'Daily log with absent/late student lists & monthly reports',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -346,6 +351,264 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTodayAttendanceCard(TeacherState teacherState, BuildContext context) {
+    final todayAtt = teacherState.todayAttendance;
+    final isMarked = todayAtt != null &&
+        (todayAtt['isMarked'] == true ||
+            (todayAtt['records'] as List?)?.isNotEmpty == true ||
+            (todayAtt['attendance'] != null));
+    final summary = todayAtt?['summary'] as Map<String, dynamic>?;
+
+    final presentCount = summary?['presentCount'] ?? 0;
+    final absentCount = summary?['absentCount'] ?? 0;
+    final lateCount = summary?['lateCount'] ?? 0;
+    final absentStudents = (summary?['absentStudents'] as List<dynamic>?) ?? [];
+    final lateStudents = (summary?['lateStudents'] as List<dynamic>?) ?? [];
+
+    if (isMarked) {
+      return GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.emerald.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.emerald),
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Today's Attendance Status",
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          'Recorded & synced with parents',
+                          style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.emerald.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    'Marked ✅',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.emerald,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildAttStatItem('Present', presentCount, AppColors.emerald),
+                _buildAttStatItem('Absent', absentCount, AppColors.rose),
+                _buildAttStatItem('Late', lateCount, AppColors.amber),
+              ],
+            ),
+            if (absentStudents.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.rose.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.rose.withOpacity(0.2)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.cancel_rounded, size: 14, color: AppColors.rose),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Absent: ',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.rose),
+                    ),
+                    Expanded(
+                      child: Text(
+                        absentStudents.map((s) => '${s['name']} (#${s['rollNumber']})').join(', '),
+                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textPrimary),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (lateStudents.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.amber.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.amber.withOpacity(0.2)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.schedule_rounded, size: 14, color: AppColors.amber),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Late: ',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.amber),
+                    ),
+                    Expanded(
+                      child: Text(
+                        lateStudents.map((s) => '${s['name']} (#${s['rollNumber']})').join(', '),
+                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textPrimary),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MarkAttendanceScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.edit_rounded, size: 15),
+                    label: const Text('Edit Attendance'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textPrimary,
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AttendanceReportScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.receipt_long_rounded, size: 15),
+                    label: const Text('View Daily Log'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } else {
+      return GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.amber.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.pending_actions_rounded, color: AppColors.amber, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Today's Attendance Pending",
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Mark attendance now to alert parents',
+                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MarkAttendanceScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.emerald,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              ),
+              child: Text(
+                'Mark Now',
+                style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  Widget _buildAttStatItem(String label, int count, Color color) {
+    return Column(
+      children: [
+        Text(
+          '$count',
+          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary),
+        ),
+      ],
     );
   }
 

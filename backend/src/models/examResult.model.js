@@ -76,6 +76,14 @@ const examResultSchema = new mongoose.Schema(
       type: String,
       default: 'A',
     },
+    isPublished: {
+      type: Boolean,
+      default: false,
+    },
+    rank: {
+      type: Number,
+      default: null,
+    },
     enteredBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

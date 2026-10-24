@@ -6,12 +6,14 @@ class StatusBadge extends StatelessWidget {
   final String status;
   final double fontSize;
   final EdgeInsetsGeometry padding;
+  final Color? color;
 
   const StatusBadge({
     super.key,
     required this.status,
     this.fontSize = 11,
     this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    this.color,
   });
 
   @override
@@ -20,13 +22,17 @@ class StatusBadge extends StatelessWidget {
     Color fg;
     String display = status.replaceAll('_', ' ').toUpperCase();
 
-    switch (status.toUpperCase()) {
-      case 'APPROVED':
-      case 'PRESENT':
-      case 'PAID':
-        bg = AppColors.emerald.withOpacity(0.16);
-        fg = AppColors.emerald;
-        break;
+    if (color != null) {
+      bg = color!.withOpacity(0.16);
+      fg = color!;
+    } else {
+      switch (status.toUpperCase()) {
+        case 'APPROVED':
+        case 'PRESENT':
+        case 'PAID':
+          bg = AppColors.emerald.withOpacity(0.16);
+          fg = AppColors.emerald;
+          break;
       case 'ABSENT':
       case 'REJECTED':
       case 'OVERDUE':
@@ -44,6 +50,7 @@ class StatusBadge extends StatelessWidget {
         bg = AppColors.primary.withOpacity(0.16);
         fg = AppColors.primaryLight;
         break;
+      }
     }
 
     return Container(

@@ -23,6 +23,18 @@ app.use(express.json({ limit: '16mb' }));
 app.use(express.urlencoded({ extended: true, limit: '16mb' }));
 app.use(morgan('dev'));
 
+// Root welcome & status endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: '🚀 School Management Enterprise API is live and operational!',
+    version: '1.0.0',
+    apiBase: '/api/v1',
+    health: '/health',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({

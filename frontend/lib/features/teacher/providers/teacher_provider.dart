@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/dio_client.dart';
 
@@ -9,6 +10,9 @@ class TeacherState {
   final List<dynamic> students;
   final List<dynamic> leaveRequests;
   final List<dynamic> salarySlips;
+  final Map<String, dynamic>? todayAttendance;
+  final List<dynamic> attendanceLogs;
+  final Map<String, dynamic>? monthlyReport;
   final String? errorMessage;
 
   TeacherState({
@@ -17,6 +21,9 @@ class TeacherState {
     this.students = const [],
     this.leaveRequests = const [],
     this.salarySlips = const [],
+    this.todayAttendance,
+    this.attendanceLogs = const [],
+    this.monthlyReport,
     this.errorMessage,
   });
 
@@ -26,6 +33,9 @@ class TeacherState {
     List<dynamic>? students,
     List<dynamic>? leaveRequests,
     List<dynamic>? salarySlips,
+    Map<String, dynamic>? todayAttendance,
+    List<dynamic>? attendanceLogs,
+    Map<String, dynamic>? monthlyReport,
     String? errorMessage,
     bool clearError = false,
   }) {
@@ -35,6 +45,9 @@ class TeacherState {
       students: students ?? this.students,
       leaveRequests: leaveRequests ?? this.leaveRequests,
       salarySlips: salarySlips ?? this.salarySlips,
+      todayAttendance: todayAttendance ?? this.todayAttendance,
+      attendanceLogs: attendanceLogs ?? this.attendanceLogs,
+      monthlyReport: monthlyReport ?? this.monthlyReport,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
@@ -55,6 +68,7 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
 
       List<dynamic> studentsList = [];
       List<dynamic> leavesList = [];
+      Map<String, dynamic>? todayAttData;
 
       if (classId != null) {
         final studentsRes = await _dio.get(
@@ -68,6 +82,16 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
           queryParameters: {'classId': classId},
         );
         leavesList = leavesRes.data['data'] ?? [];
+
+        // Load today's attendance summary for quick teacher view
+        try {
+          final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          final attRes = await _dio.get(
+            ApiConstants.classAttendance,
+            queryParameters: {'classId': classId, 'date': todayStr},
+          );
+          todayAttData = attRes.data['data'];
+        } catch (_) {}
       }
 
       final salaryRes = await _dio.get(ApiConstants.teacherSalarySlips);
@@ -79,9 +103,70 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
         students: studentsList,
         leaveRequests: leavesList,
         salarySlips: salaryList,
+        todayAttendance: todayAttData,
       );
     } on DioException catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.error?.toString());
+    }
+  }
+
+  Future<Map<String, dynamic>?> fetchAttendanceForDate({
+    required String classId,
+    required String date,
+  }) async {
+    try {
+      final res = await _dio.get(
+        ApiConstants.classAttendance,
+        queryParameters: {'classId': classId, 'date': date},
+      );
+      return res.data['data'];
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return null;
+    }
+  }
+
+  Future<List<dynamic>> fetchClassAttendanceLogs({
+    required String classId,
+    String? month,
+    String? year,
+  }) async {
+    try {
+      final res = await _dio.get(
+        ApiConstants.classAttendanceLogs(classId),
+        queryParameters: {
+          if (month != null) 'month': month,
+          if (year != null) 'year': year,
+        },
+      );
+      final logs = res.data['data'] as List<dynamic>? ?? [];
+      state = state.copyWith(attendanceLogs: logs);
+      return logs;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> fetchClassMonthlyReport({
+    required String classId,
+    String? month,
+    String? year,
+  }) async {
+    try {
+      final res = await _dio.get(
+        ApiConstants.classMonthlyReport(classId),
+        queryParameters: {
+          if (month != null) 'month': month,
+          if (year != null) 'year': year,
+        },
+      );
+      final report = res.data['data'];
+      state = state.copyWith(monthlyReport: report);
+      return report;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return null;
     }
   }
 
@@ -99,6 +184,8 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
           'records': records,
         },
       );
+      // Reload dashboard so today's attendance updates immediately across views
+      await loadDashboard();
       return true;
     } on DioException catch (e) {
       state = state.copyWith(errorMessage: e.error?.toString());

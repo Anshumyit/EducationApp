@@ -25,6 +25,27 @@ const classroomSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    subjects: [
+      {
+        name: { type: String, required: true },
+        code: { type: String, default: '' },
+        teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      },
+    ],
+    timetable: [
+      {
+        day: { type: String, enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] },
+        periods: [
+          {
+            periodNumber: Number,
+            subject: String,
+            startTime: String,
+            endTime: String,
+            teacherName: String,
+          },
+        ],
+      },
+    ],
   },
   {
     timestamps: true,

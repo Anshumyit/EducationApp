@@ -5,19 +5,22 @@ import '../constants/app_colors.dart';
 class EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String description;
+  final String? description;
+  final String? message;
   final Widget? action;
 
   const EmptyState({
     super.key,
     required this.icon,
     required this.title,
-    required this.description,
+    this.description,
+    this.message,
     this.action,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveDescription = description ?? message ?? '';
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -45,7 +48,7 @@ class EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              description,
+              effectiveDescription,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize: 14,

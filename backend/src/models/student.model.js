@@ -53,6 +53,27 @@ const studentSchema = new mongoose.Schema(
       type: String,
       default: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=150&q=80',
     },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'TRANSFERRED', 'TC_ISSUED', 'PROMOTED', 'INACTIVE'],
+      default: 'ACTIVE',
+    },
+    tcNumber: {
+      type: String,
+      default: '',
+    },
+    tcIssueDate: {
+      type: Date,
+      default: null,
+    },
+    tcReason: {
+      type: String,
+      default: '',
+    },
+    academicSession: {
+      type: String,
+      default: '2026-2027',
+    },
   },
   {
     timestamps: true,
