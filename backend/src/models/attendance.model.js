@@ -38,6 +38,11 @@ const attendanceSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    status: {
+      type: String,
+      enum: Object.values(ATTENDANCE_STATUS),
+      default: ATTENDANCE_STATUS.PRESENT,
+    },
     date: {
       type: String, // 'YYYY-MM-DD' for simple date queries
       required: true,

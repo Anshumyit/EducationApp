@@ -58,58 +58,58 @@
 
       <nav class="sidebar-nav">
         <div class="nav-section-title">MAIN CONTROLLER</div>
-        <button class="nav-item active" data-tab="dashboard">
+        <button id="nav-tab-dashboard" class="nav-item active" data-tab="dashboard">
           <i class="fa-solid fa-gauge-high"></i>
           <span>Dashboard Overview</span>
         </button>
-        <button class="nav-item" data-tab="schools">
+        <button id="nav-tab-schools" class="nav-item" data-tab="schools">
           <i class="fa-solid fa-school"></i>
           <span>School Management</span>
           <span class="nav-badge" id="badgeSchoolsCount">0</span>
         </button>
-        <button class="nav-item" data-tab="admins">
+        <button id="nav-tab-admins" class="nav-item" data-tab="admins">
           <i class="fa-solid fa-user-shield"></i>
           <span>School Admins</span>
           <span class="nav-badge warning" id="badgePendingAdmins">0</span>
         </button>
-        <button class="nav-item" data-tab="permissions">
+        <button id="nav-tab-permissions" class="nav-item" data-tab="permissions">
           <i class="fa-solid fa-sliders"></i>
           <span>Permissions & Limits</span>
         </button>
 
         <div class="nav-section-title">INSTITUTIONAL OVERSIGHT</div>
-        <button class="nav-item" data-tab="students">
+        <button id="nav-tab-students" class="nav-item" data-tab="students">
           <i class="fa-solid fa-user-graduate"></i>
           <span>Students & Admission</span>
         </button>
-        <button class="nav-item" data-tab="staff">
+        <button id="nav-tab-staff" class="nav-item" data-tab="staff">
           <i class="fa-solid fa-chalkboard-user"></i>
           <span>Faculty & Staff</span>
         </button>
-        <button class="nav-item" data-tab="biometric">
+        <button id="nav-tab-biometric" class="nav-item" data-tab="biometric">
           <i class="fa-solid fa-fingerprint"></i>
           <span>Biometric & Attendance</span>
         </button>
-        <button class="nav-item" data-tab="fleet">
+        <button id="nav-tab-fleet" class="nav-item" data-tab="fleet">
           <i class="fa-solid fa-bus"></i>
           <span>Bus Fleet & GPS</span>
           <span class="nav-badge pulse" id="badgeBusAlerts">0</span>
         </button>
-        <button class="nav-item" data-tab="exams">
+        <button id="nav-tab-exams" class="nav-item" data-tab="exams">
           <i class="fa-solid fa-file-signature"></i>
           <span>Exams & Results</span>
         </button>
-        <button class="nav-item" data-tab="financials">
+        <button id="nav-tab-financials" class="nav-item" data-tab="financials">
           <i class="fa-solid fa-sack-dollar"></i>
           <span>Central Financials</span>
         </button>
 
         <div class="nav-section-title">SYSTEM & SECURITY</div>
-        <button class="nav-item" data-tab="broadcast">
+        <button id="nav-tab-broadcast" class="nav-item" data-tab="broadcast">
           <i class="fa-solid fa-bullhorn"></i>
           <span>Central Broadcast</span>
         </button>
-        <button class="nav-item" data-tab="settings">
+        <button id="nav-tab-settings" class="nav-item" data-tab="settings">
           <i class="fa-solid fa-gears"></i>
           <span>System & Audit Logs</span>
         </button>
@@ -424,7 +424,11 @@
               </select>
               <button class="btn btn-secondary" onclick="checkDuplicateStudents()">
                 <i class="fa-solid fa-copy"></i>
-                <span>Cross-School Duplicate Check</span>
+                <span>Duplicate Check</span>
+              </button>
+              <button class="btn btn-primary" onclick="openEnrollStudentModal()">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>New Student Admission</span>
               </button>
             </div>
           </div>
@@ -461,7 +465,15 @@
               </select>
               <button class="btn btn-secondary" onclick="loadDuplicateStaffCheck()">
                 <i class="fa-solid fa-triangle-exclamation"></i>
-                <span>Duplicate Employee ID Audit</span>
+                <span>Duplicate Audit</span>
+              </button>
+              <button class="btn btn-secondary" onclick="openClassesAllocationModal()">
+                <i class="fa-solid fa-chalkboard"></i>
+                <span>Class & Teaching Allocation</span>
+              </button>
+              <button class="btn btn-primary" onclick="openOnboardStaffModal()">
+                <i class="fa-solid fa-user-tie"></i>
+                <span>Onboard Faculty / Staff</span>
               </button>
             </div>
           </div>
@@ -495,11 +507,15 @@
             <div class="filter-controls">
               <button class="btn btn-secondary" onclick="openManualAttendanceOverrideModal()">
                 <i class="fa-solid fa-pen-to-square"></i>
-                <span>Manual Attendance Override</span>
+                <span>Override Record</span>
               </button>
-              <button class="btn btn-primary" onclick="openCreateBiometricModal()">
+              <button class="btn btn-secondary" onclick="openCreateBiometricModal()">
                 <i class="fa-solid fa-plus"></i>
-                <span>Register Biometric Device</span>
+                <span>Register Device</span>
+              </button>
+              <button class="btn btn-primary" onclick="openMarkFacultyAttendanceModal()">
+                <i class="fa-solid fa-calendar-check"></i>
+                <span>Direct Mark Attendance</span>
               </button>
             </div>
           </div>
@@ -517,6 +533,9 @@
               <span>Fleet Monitoring, GPS Telemetry & Compliance Warnings</span>
             </div>
             <div class="filter-controls">
+              <select id="fleetSchoolFilter" class="select-input" onchange="loadBusFleet()">
+                <option value="">All Schools</option>
+              </select>
               <button class="btn btn-secondary" onclick="loadBusAlertsModal()">
                 <i class="fa-solid fa-triangle-exclamation"></i>
                 <span>Pollution & Fitness Expiries</span>
@@ -544,6 +563,10 @@
               <select id="examSchoolFilter" class="select-input" onchange="loadSuperAdminExams()">
                 <option value="">All Schools</option>
               </select>
+              <button class="btn btn-primary" onclick="openRecordExamModal()">
+                <i class="fa-solid fa-file-circle-plus"></i>
+                <span>Record Student Marks</span>
+              </button>
             </div>
           </div>
 
@@ -1097,7 +1120,618 @@
     </div>
   </div>
 
-  <!-- Floating Toast Notification System -->
+  <!-- 8. Student Admission Modal -->
+  <div id="enrollStudentModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-graduate text-primary"></i> Direct Student Admission</h3>
+        <button class="btn-close" onclick="closeModal('enrollStudentModal')">&times;</button>
+      </div>
+      <form id="enrollStudentForm" onsubmit="submitEnrollStudent(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Target School Institution *</label>
+            <select id="enrollStudentSchool" class="select-input" required>
+              <option value="">-- Choose School --</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>First Name *</label>
+              <input type="text" id="enrollStudentFirstName" class="input-field" placeholder="e.g. Aarav" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Last Name</label>
+              <input type="text" id="enrollStudentLastName" class="input-field" placeholder="e.g. Sharma">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Grade / Class *</label>
+              <input type="text" id="enrollStudentClass" class="input-field" placeholder="e.g. Class 10" value="Class 10" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Section *</label>
+              <input type="text" id="enrollStudentSection" class="input-field" placeholder="e.g. A" value="A" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Roll Number *</label>
+              <input type="number" id="enrollStudentRollNo" class="input-field" placeholder="e.g. 15" value="1" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Admission / Scholar No</label>
+              <input type="text" id="enrollStudentAdmissionNo" class="input-field" placeholder="e.g. ADM-2026-001">
+            </div>
+            <div class="form-group flex-1">
+              <label>Gender</label>
+              <select id="enrollStudentGender" class="select-input">
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Parent / Guardian Name *</label>
+              <input type="text" id="enrollStudentParentName" class="input-field" placeholder="e.g. Vikram Sharma" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Parent Contact Phone *</label>
+              <input type="tel" id="enrollStudentParentPhone" class="input-field" placeholder="e.g. 9876543210" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Residential Address</label>
+            <input type="text" id="enrollStudentAddress" class="input-field" placeholder="Complete residential address">
+          </div>
+        </div>
+        <div class="modal-footer sticky-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('enrollStudentModal')">Cancel</button>
+          <button type="submit" id="enrollStudentSubmitBtn" class="btn btn-primary">
+            <i class="fa-solid fa-check"></i> Admit Student into School
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 9. Onboard Faculty / Staff Modal -->
+  <div id="onboardStaffModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-chalkboard-user text-primary"></i> Onboard Faculty / Staff Member</h3>
+        <button class="btn-close" onclick="closeModal('onboardStaffModal')">&times;</button>
+      </div>
+      <form id="onboardStaffForm" onsubmit="submitOnboardStaff(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Target School Institution *</label>
+            <select id="onboardStaffSchool" class="select-input" required>
+              <option value="">-- Choose School --</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Full Name *</label>
+              <input type="text" id="onboardStaffName" class="input-field" placeholder="e.g. Dr. Priya Verma" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>System Role *</label>
+              <select id="onboardStaffRole" class="select-input" required>
+                <option value="TEACHER">Teacher / Faculty</option>
+                <option value="STAFF">Administrative Staff</option>
+                <option value="ADMIN">School Administrator</option>
+                <option value="ACCOUNTANT">Accountant / Cashier</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Official Email</label>
+              <input type="email" id="onboardStaffEmail" class="input-field" placeholder="priya.verma@school.edu">
+            </div>
+            <div class="form-group flex-1">
+              <label>Contact Phone *</label>
+              <input type="tel" id="onboardStaffPhone" class="input-field" placeholder="9876543210" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Account Password *</label>
+              <input type="password" id="onboardStaffPassword" class="input-field" value="Password@123" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Designation Title</label>
+              <input type="text" id="onboardStaffDesignation" class="input-field" placeholder="e.g. PGT Mathematics Educator">
+            </div>
+            <div class="form-group flex-1">
+              <label>Assigned Teaching Subjects (comma separated)</label>
+              <input type="text" id="onboardStaffSubjects" class="input-field" placeholder="e.g. Mathematics, Physics, Statistics">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Designated Class Teacher?</label>
+              <select id="onboardStaffIsClassTeacher" class="select-input">
+                <option value="false">No (General Subject Faculty)</option>
+                <option value="true">Yes (Designated Class Teacher)</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label>Assigned Class & Section</label>
+              <input type="text" id="onboardStaffClass" class="input-field" placeholder="e.g. Class 10">
+            </div>
+            <div class="form-group flex-1">
+              <label>Section</label>
+              <input type="text" id="onboardStaffSection" class="input-field" placeholder="e.g. A" value="A">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Highest Qualification</label>
+              <input type="text" id="onboardStaffQualification" class="input-field" placeholder="e.g. M.Sc Mathematics, B.Ed">
+            </div>
+            <div class="form-group flex-1">
+              <label>Monthly Salary (₹)</label>
+              <input type="number" id="onboardStaffSalary" class="input-field" value="48000">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer sticky-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('onboardStaffModal')">Cancel</button>
+          <button type="submit" id="onboardStaffSubmitBtn" class="btn btn-primary">
+            <i class="fa-solid fa-user-plus"></i> Onboard Member into School
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 10. Classrooms & Faculty Allocation Modal -->
+  <div id="classesAllocationModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel modal-xl">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-chalkboard text-primary"></i> Classrooms & Faculty Teaching Allocation</h3>
+        <button class="btn-close" onclick="closeModal('classesAllocationModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label><i class="fa-solid fa-school"></i> Target School Institution:</label>
+          <select id="classAllocSchool" class="select-input select-large" onchange="loadClassAllocationsForSchool()">
+            <option value="">-- Choose School --</option>
+          </select>
+        </div>
+
+        <!-- Current Allocations Overview -->
+        <div class="mb-4">
+          <h4 style="margin-bottom: 10px; font-size: 15px;"><i class="fa-solid fa-list-check text-primary"></i> Current Classrooms & Assigned Teachers:</h4>
+          <div id="classAllocationsOverviewList">
+            <div class="empty-state">Select a school above to inspect classroom and subject faculty allocations.</div>
+          </div>
+        </div>
+
+        <!-- Add or Update Allocation Form -->
+        <form id="classAllocationForm" onsubmit="submitClassAllocation(event)" class="glass-panel" style="padding: 20px;">
+          <h4 style="margin-bottom: 14px; font-size: 15px;"><i class="fa-solid fa-pen-to-square text-emerald"></i> Assign / Update Classroom Faculty Mapping:</h4>
+          
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Class Name *</label>
+              <input type="text" id="allocClassName" class="input-field" placeholder="e.g. Class 10" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Section *</label>
+              <input type="text" id="allocSection" class="input-field" placeholder="e.g. A" value="A" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Room Number</label>
+              <input type="text" id="allocRoomNo" class="input-field" placeholder="e.g. Room 204">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Designated Class Teacher (Incharge)</label>
+            <select id="allocClassTeacherSelect" class="select-input">
+              <option value="">-- Choose Designated Class Teacher --</option>
+            </select>
+          </div>
+
+          <h5 style="margin-top: 14px; margin-bottom: 10px; font-size: 13.5px;"><i class="fa-solid fa-book-bookmark text-amber"></i> Subject Wise Faculty Assignments:</h5>
+          
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Subject 1 Name</label>
+              <input type="text" id="sub1Name" class="input-field" value="Mathematics">
+            </div>
+            <div class="form-group flex-2">
+              <label>Assigned Faculty</label>
+              <select id="sub1TeacherSelect" class="select-input sub-teacher-select">
+                <option value="">-- Select Faculty --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Subject 2 Name</label>
+              <input type="text" id="sub2Name" class="input-field" value="Science">
+            </div>
+            <div class="form-group flex-2">
+              <label>Assigned Faculty</label>
+              <select id="sub2TeacherSelect" class="select-input sub-teacher-select">
+                <option value="">-- Select Faculty --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Subject 3 Name</label>
+              <input type="text" id="sub3Name" class="input-field" value="English">
+            </div>
+            <div class="form-group flex-2">
+              <label>Assigned Faculty</label>
+              <select id="sub3TeacherSelect" class="select-input sub-teacher-select">
+                <option value="">-- Select Faculty --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Subject 4 Name</label>
+              <input type="text" id="sub4Name" class="input-field" value="Social Science">
+            </div>
+            <div class="form-group flex-2">
+              <label>Assigned Faculty</label>
+              <select id="sub4TeacherSelect" class="select-input sub-teacher-select">
+                <option value="">-- Select Faculty --</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- STICKY FOOTER INSIDE FORM: ALWAYS VISIBLE -->
+          <div class="modal-footer sticky-modal-footer" style="margin-top: 20px; border-radius: var(--radius-md);">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('classesAllocationModal')">Close</button>
+            <button type="submit" id="saveClassAllocSubmitBtn" class="btn btn-primary">
+              <i class="fa-solid fa-check"></i> Commit Class & Faculty Mapping
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. Direct Faculty Attendance Marking Modal -->
+  <div id="markFacultyAttendanceModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-calendar-check text-primary"></i> Direct Faculty Attendance Roll Call</h3>
+        <button class="btn-close" onclick="closeModal('markFacultyAttendanceModal')">&times;</button>
+      </div>
+      <form id="markFacultyAttendanceForm" onsubmit="submitMarkFacultyAttendance(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Target School Institution *</label>
+            <select id="markAttSchool" class="select-input" onchange="loadFacultyForAttendanceMarking()" required>
+              <option value="">-- Choose School --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Faculty Member *</label>
+            <select id="markAttFaculty" class="select-input" required>
+              <option value="">-- Select Faculty Member --</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Date *</label>
+              <input type="date" id="markAttDate" class="input-field" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Attendance Status *</label>
+              <select id="markAttStatus" class="select-input" required>
+                <option value="PRESENT">PRESENT</option>
+                <option value="LATE">LATE</option>
+                <option value="HALF_DAY">HALF DAY</option>
+                <option value="ON_DUTY">ON OFFICIAL DUTY</option>
+                <option value="ABSENT">ABSENT</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Audit Remarks / Notes</label>
+            <input type="text" id="markAttNotes" class="input-field" placeholder="e.g. Super Admin verified campus presence">
+          </div>
+        </div>
+
+        <div class="modal-footer sticky-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('markFacultyAttendanceModal')">Cancel</button>
+          <button type="submit" id="markAttSubmitBtn" class="btn btn-primary">
+            <i class="fa-solid fa-check"></i> Save Faculty Attendance
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 12. Record & Publish Student Exam Result Modal -->
+  <div id="recordExamModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-file-circle-plus text-primary"></i> Record & Publish Student Exam Results</h3>
+        <button class="btn-close" onclick="closeModal('recordExamModal')">&times;</button>
+      </div>
+      <form id="recordExamForm" onsubmit="submitRecordExam(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Target School Institution *</label>
+            <select id="recordExamSchool" class="select-input" onchange="loadStudentsForExamRecord()" required>
+              <option value="">-- Choose School --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Select Student *</label>
+            <select id="recordExamStudent" class="select-input" required>
+              <option value="">-- Choose Student --</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>Assessment / Exam Title *</label>
+              <input type="text" id="recordExamTitle" class="input-field" value="Mid-Term Summative Assessment 2026" required>
+            </div>
+            <div class="form-group flex-1">
+              <label>Class</label>
+              <input type="text" id="recordExamClass" class="input-field" value="Class 10">
+            </div>
+            <div class="form-group flex-1">
+              <label>Section</label>
+              <input type="text" id="recordExamSection" class="input-field" value="A">
+            </div>
+          </div>
+
+          <h5 style="margin-top: 14px; margin-bottom: 10px; font-size: 13.5px;"><i class="fa-solid fa-receipt text-emerald"></i> Subject Marks Obtained:</h5>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <input type="text" id="recordSub1Name" class="input-field" value="Mathematics">
+            </div>
+            <div class="form-group flex-1">
+              <input type="number" id="recordSub1Marks" class="input-field" placeholder="Marks" value="88" min="0" max="100" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <input type="text" id="recordSub2Name" class="input-field" value="Science">
+            </div>
+            <div class="form-group flex-1">
+              <input type="number" id="recordSub2Marks" class="input-field" placeholder="Marks" value="92" min="0" max="100" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <input type="text" id="recordSub3Name" class="input-field" value="English">
+            </div>
+            <div class="form-group flex-1">
+              <input type="number" id="recordSub3Marks" class="input-field" placeholder="Marks" value="85" min="0" max="100" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <input type="text" id="recordSub4Name" class="input-field" value="Social Science">
+            </div>
+            <div class="form-group flex-1">
+              <input type="number" id="recordSub4Marks" class="input-field" placeholder="Marks" value="90" min="0" max="100" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <input type="text" id="recordSub5Name" class="input-field" value="Hindi">
+            </div>
+            <div class="form-group flex-1">
+              <input type="number" id="recordSub5Marks" class="input-field" placeholder="Marks" value="86" min="0" max="100" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer sticky-modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('recordExamModal')">Cancel</button>
+          <button type="submit" id="recordExamSubmitBtn" class="btn btn-primary">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Record & Publish Result
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 13. MASTER CAMPUS COMMAND HUB MODAL (ALL-IN-ONE FOR ANY SCHOOL) -->
+  <div id="campusHubModal" class="modal-backdrop hidden">
+    <div class="modal-box glass-panel modal-xl">
+      <div class="modal-header">
+        <div>
+          <h3><i class="fa-solid fa-graduation-cap text-primary"></i> <span id="hubSchoolName">Campus Command Hub</span></h3>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+            Code: <strong id="hubSchoolCode">225</strong> • Board: <span id="hubSchoolBoard">CBSE</span> • Status: <span id="hubSchoolStatus" class="status-pill active">ACTIVE</span>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeModal('campusHubModal')">&times;</button>
+      </div>
+
+      <!-- Campus Hub Navigation Tabs -->
+      <div class="modal-nav-tabs">
+        <button id="hub-tab-students" class="modal-nav-tab active" data-hubtab="students" onclick="switchHubTab('students')">
+          <i class="fa-solid fa-user-graduate"></i> Students (<span id="hubStudentsCount">0</span>)
+        </button>
+        <button id="hub-tab-faculty" class="modal-nav-tab" data-hubtab="faculty" onclick="switchHubTab('faculty')">
+          <i class="fa-solid fa-chalkboard-user"></i> Faculty & Staff (<span id="hubStaffCount">0</span>)
+        </button>
+        <button id="hub-tab-classes" class="modal-nav-tab" data-hubtab="classes" onclick="switchHubTab('classes')">
+          <i class="fa-solid fa-chalkboard"></i> Classes & Teaching Allocation
+        </button>
+        <button id="hub-tab-fleet" class="modal-nav-tab" data-hubtab="fleet" onclick="switchHubTab('fleet')">
+          <i class="fa-solid fa-bus"></i> Bus Fleet & GPS
+        </button>
+        <button id="hub-tab-attendance" class="modal-nav-tab" data-hubtab="attendance" onclick="switchHubTab('attendance')">
+          <i class="fa-solid fa-fingerprint"></i> Faculty Attendance Roll
+        </button>
+        <button id="hub-tab-exams" class="modal-nav-tab" data-hubtab="exams" onclick="switchHubTab('exams')">
+          <i class="fa-solid fa-file-signature"></i> Exams & Results
+        </button>
+      </div>
+
+      <!-- Campus Hub Panes Body -->
+      <div class="modal-body" style="min-height: 400px;">
+        <!-- Hub Pane 1: Students -->
+        <div id="hubPaneStudents" class="hub-tab-pane active">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h4 style="font-size: 15px;"><i class="fa-solid fa-user-graduate text-primary"></i> Enrolled Students in this Campus</h4>
+            <button id="hub-btn-admit-student" class="btn btn-sm btn-primary" onclick="hubQuickAdmitStudent()">
+              <i class="fa-solid fa-user-plus"></i> Admit New Student
+            </button>
+          </div>
+          <div class="table-container glass-panel">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Student Name</th>
+                  <th>Class & Section</th>
+                  <th>Roll / Admission No</th>
+                  <th>Parent / Guardian</th>
+                  <th>Parent Contact</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="hubStudentsTableBody">
+                <tr><td colspan="6" class="text-center">Loading students...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Hub Pane 2: Faculty & Staff -->
+        <div id="hubPaneFaculty" class="hub-tab-pane">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h4 style="font-size: 15px;"><i class="fa-solid fa-chalkboard-user text-primary"></i> Faculty & Staff Directory</h4>
+            <button id="hub-btn-onboard-faculty" class="btn btn-sm btn-primary" onclick="hubQuickOnboardFaculty()">
+              <i class="fa-solid fa-user-plus"></i> Onboard Faculty / Staff
+            </button>
+          </div>
+          <div class="table-container glass-panel">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Member Name</th>
+                  <th>Role</th>
+                  <th>Designation / Qualification</th>
+                  <th>Assigned Subjects</th>
+                  <th>Class Teacher of</th>
+                  <th>Contact</th>
+                </tr>
+              </thead>
+              <tbody id="hubFacultyTableBody">
+                <tr><td colspan="6" class="text-center">Loading faculty roster...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Hub Pane 3: Classes & Teaching Allocation -->
+        <div id="hubPaneClasses" class="hub-tab-pane">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h4 style="font-size: 15px;"><i class="fa-solid fa-chalkboard text-primary"></i> Classrooms, Designated Class Teachers & Subject Faculty</h4>
+            <button id="hub-btn-allocate-classes" class="btn btn-sm btn-primary" onclick="hubQuickAllocateClasses()">
+              <i class="fa-solid fa-plus"></i> Add / Assign Class Faculty
+            </button>
+          </div>
+          <div id="hubClassesContainer">
+            <div class="empty-state">Loading classroom faculty assignments...</div>
+          </div>
+        </div>
+
+        <!-- Hub Pane 4: Bus Fleet & GPS -->
+        <div id="hubPaneFleet" class="hub-tab-pane">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h4 style="font-size: 15px;"><i class="fa-solid fa-bus text-amber"></i> Campus Bus Fleet & Live GPS Telemetry</h4>
+            <button id="hub-btn-add-bus" class="btn btn-sm btn-primary" onclick="hubQuickAddBus()">
+              <i class="fa-solid fa-plus"></i> Add Vehicle to Campus Fleet
+            </button>
+          </div>
+          <div id="hubFleetCardsContainer" class="fleet-cards-grid">
+            <div class="empty-state">Loading bus fleet...</div>
+          </div>
+        </div>
+
+        <!-- Hub Pane 5: Faculty Attendance Roll -->
+        <div id="hubPaneAttendance" class="hub-tab-pane">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h4 style="font-size: 15px;"><i class="fa-solid fa-fingerprint text-emerald"></i> Today's Faculty Attendance & Roll Call</h4>
+            <button id="hub-btn-mark-attendance" class="btn btn-sm btn-primary" onclick="hubQuickMarkAttendance()">
+              <i class="fa-solid fa-calendar-check"></i> Mark Faculty Attendance
+            </button>
+          </div>
+          <div class="table-container glass-panel">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Faculty Member</th>
+                  <th>Employee ID</th>
+                  <th>Attendance Status</th>
+                  <th>Punch Source</th>
+                  <th>Quick Action</th>
+                </tr>
+              </thead>
+              <tbody id="hubAttendanceTableBody">
+                <tr><td colspan="5" class="text-center">Loading faculty attendance...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Hub Pane 6: Exams & Results -->
+        <div id="hubPaneExams" class="hub-tab-pane">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h4 style="font-size: 15px;"><i class="fa-solid fa-file-signature text-primary"></i> Academic Examinations & Student Results</h4>
+            <button id="hub-btn-record-exam" class="btn btn-sm btn-primary" onclick="hubQuickRecordExam()">
+              <i class="fa-solid fa-plus"></i> Record Student Marks
+            </button>
+          </div>
+          <div class="table-container glass-panel">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Exam Title</th>
+                  <th>Student</th>
+                  <th>Class</th>
+                  <th>Subject Marks Breakdown</th>
+                  <th>Publishing Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="hubExamsTableBody">
+                <tr><td colspan="6" class="text-center">Loading exam assessments...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hub Sticky Footer -->
+      <div class="modal-footer sticky-modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('campusHubModal')">
+          <i class="fa-solid fa-arrow-left"></i> Back to School Registry
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Main JavaScript Controller -->

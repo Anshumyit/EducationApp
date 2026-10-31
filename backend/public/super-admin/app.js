@@ -323,8 +323,11 @@ function renderSchoolsList(schools) {
         <td><span class="status-pill ${statusClass}">${s.status}</span></td>
         <td>
           <div class="action-buttons-cell">
+            <button id="btn-manage-campus-${s.code || s._id}" class="btn btn-sm btn-primary" onclick="openCampusHub('${s._id}')" title="Campus Command Hub">
+              <i class="fa-solid fa-graduation-cap"></i> Manage Campus
+            </button>
             ${s.status === 'PENDING' ? `
-              <button class="btn btn-sm btn-primary" onclick="setSchoolStatus('${s._id}', 'ACTIVE')">
+              <button class="btn btn-sm btn-secondary" onclick="setSchoolStatus('${s._id}', 'ACTIVE')">
                 <i class="fa-solid fa-check"></i> Approve
               </button>
               <button class="btn btn-sm btn-secondary" onclick="setSchoolStatus('${s._id}', 'REJECTED')">
@@ -335,7 +338,7 @@ function renderSchoolsList(schools) {
                 <i class="fa-solid fa-ban"></i> Suspend
               </button>
             ` : `
-              <button class="btn btn-sm btn-primary" onclick="setSchoolStatus('${s._id}', 'ACTIVE')">
+              <button class="btn btn-sm btn-secondary" onclick="setSchoolStatus('${s._id}', 'ACTIVE')">
                 <i class="fa-solid fa-play"></i> Activate
               </button>
             `}
@@ -748,11 +751,11 @@ async function loadSuperAdminStudents() {
     tbody.innerHTML = students.map(st => `
       <tr>
         <td>
-          <div style="font-weight: 600;">${st.firstName} ${st.lastName || ''}</div>
+          <div style="font-weight: 600;">${st.name || `${st.firstName || ''} ${st.lastName || ''}`.trim()}</div>
           <div class="text-muted" style="font-size: 11px;">Gender: ${st.gender || 'N/A'}</div>
         </td>
         <td>${st.schoolId?.name || 'N/A'}</td>
-        <td>${st.currentClass || 'Class 10'} (${st.section || 'A'})</td>
+        <td>${st.currentClass || st.classId?.name || 'Class 10'} (${st.section || st.classId?.section || 'A'})</td>
         <td><strong>${st.rollNumber || st.admissionNumber || 'N/A'}</strong></td>
         <td>${st.parentName || st.parentId?.name || 'Guardian'}</td>
         <td><span class="status-pill active">ENROLLED</span></td>
@@ -956,7 +959,9 @@ async function loadBusFleet() {
   grid.innerHTML = '<div class="text-muted">Loading GPS bus telemetry...</div>';
 
   try {
-    const res = await apiCall('/super-admin/buses');
+    const schoolFilter = document.getElementById('fleetSchoolFilter')?.value;
+    const url = schoolFilter ? `/super-admin/buses?schoolId=${schoolFilter}` : '/super-admin/buses';
+    const res = await apiCall(url);
     const buses = extractList(res.data, 'buses');
 
     if (buses.length === 0) {
@@ -1382,7 +1387,18 @@ function populateSchoolsDropdowns(schools) {
     'studentSchoolFilter',
     'staffSchoolFilter',
     'examSchoolFilter',
-    'broadcastTargetSchool'
+    'fleetSchoolFilter',
+    'broadcastTargetSchool',
+    'enrollStudentSchool',
+    'onboardStaffSchool',
+    'classAllocSchool',
+    'markAttSchool',
+    'recordExamSchool',
+    'newBiometricSchool',
+    'newBusSchool',
+    'feeCorrectionSchool',
+    'overrideSchool',
+    'newAdminSchoolSelect'
   ];
   dropdownIds.forEach(id => populateSchoolsSelect(id, schools));
 }
@@ -1426,4 +1442,761 @@ function showToast(message, type = 'success') {
     toast.style.opacity = '0';
     setTimeout(() => toast.remove(), 300);
   }, 4000);
+}
+
+// ==========================================
+// 16. STUDENT ADMISSIONS CONTROLLER
+// ==========================================
+function openEnrollStudentModal(preselectedSchoolId) {
+  document.getElementById('enrollStudentForm').reset();
+  populateSchoolsSelect('enrollStudentSchool');
+  if (preselectedSchoolId) {
+    document.getElementById('enrollStudentSchool').value = preselectedSchoolId;
+  }
+  openModal('enrollStudentModal');
+}
+
+async function submitEnrollStudent(e) {
+  e.preventDefault();
+  const submitBtn = document.getElementById('enrollStudentSubmitBtn');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing Admission...';
+
+  const fName = document.getElementById('enrollStudentFirstName').value.trim();
+  const lName = document.getElementById('enrollStudentLastName').value.trim();
+  const fullName = `${fName} ${lName}`.trim();
+
+  const body = {
+    schoolId: document.getElementById('enrollStudentSchool').value,
+    name: fullName,
+    firstName: fName,
+    lastName: lName,
+    className: document.getElementById('enrollStudentClass').value.trim() || 'Class 10',
+    section: document.getElementById('enrollStudentSection').value.trim() || 'A',
+    rollNumber: document.getElementById('enrollStudentRollNo').value.trim() || undefined,
+    admissionNumber: document.getElementById('enrollStudentAdmissionNo').value.trim() || undefined,
+    gender: document.getElementById('enrollStudentGender').value || 'MALE',
+    parentName: document.getElementById('enrollStudentParentName').value.trim() || 'Parent / Guardian',
+    parentPhone: document.getElementById('enrollStudentParentPhone').value.trim() || '9876543210',
+    emergencyContact: document.getElementById('enrollStudentParentPhone').value.trim() || '9876543210',
+    address: document.getElementById('enrollStudentAddress').value.trim() || 'Campus Residence',
+  };
+
+  try {
+    const res = await apiCall('/super-admin/students', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    showToast(`Student ${fullName || 'Student'} admitted successfully into institution!`, 'success');
+    closeModal('enrollStudentModal');
+    loadSuperAdminStudents();
+    loadDashboardData();
+    if (currentHubSchoolId === body.schoolId) {
+      loadHubStudents(body.schoolId);
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Admit Student into School';
+  }
+}
+
+// ==========================================
+// 17. FACULTY & STAFF ONBOARDING CONTROLLER
+// ==========================================
+function openOnboardStaffModal(preselectedSchoolId) {
+  document.getElementById('onboardStaffForm').reset();
+  populateSchoolsSelect('onboardStaffSchool');
+  if (preselectedSchoolId) {
+    document.getElementById('onboardStaffSchool').value = preselectedSchoolId;
+  }
+  openModal('onboardStaffModal');
+}
+
+async function submitOnboardStaff(e) {
+  e.preventDefault();
+  const submitBtn = document.getElementById('onboardStaffSubmitBtn');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Onboarding...';
+
+  const body = {
+    schoolId: document.getElementById('onboardStaffSchool').value,
+    name: document.getElementById('onboardStaffName').value.trim(),
+    role: document.getElementById('onboardStaffRole').value,
+    email: document.getElementById('onboardStaffEmail').value.trim(),
+    phone: document.getElementById('onboardStaffPhone').value.trim(),
+    password: document.getElementById('onboardStaffPassword').value,
+    designation: document.getElementById('onboardStaffDesignation').value.trim(),
+    subjects: document.getElementById('onboardStaffSubjects').value.trim(),
+    isClassTeacher: document.getElementById('onboardStaffIsClassTeacher').value === 'true',
+    assignedClassName: document.getElementById('onboardStaffClass').value.trim(),
+    assignedClassSection: document.getElementById('onboardStaffSection').value.trim() || 'A',
+    qualification: document.getElementById('onboardStaffQualification').value.trim(),
+    salary: Number(document.getElementById('onboardStaffSalary').value) || 45000,
+  };
+
+  try {
+    await apiCall('/super-admin/staff', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    showToast(`Faculty member ${body.name} onboarded into institution with role ${body.role}`, 'success');
+    closeModal('onboardStaffModal');
+    loadSuperAdminStaff();
+    loadDashboardData();
+    if (currentHubSchoolId === body.schoolId) {
+      loadHubFaculty(body.schoolId);
+      loadHubClasses(body.schoolId);
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Onboard Member into School';
+  }
+}
+
+// ==========================================
+// 18. CLASSROOM & FACULTY ALLOCATION CONTROLLER
+// ==========================================
+let currentSchoolStaff = [];
+
+function openClassesAllocationModal(preselectedSchoolId) {
+  populateSchoolsSelect('classAllocSchool');
+  if (preselectedSchoolId) {
+    document.getElementById('classAllocSchool').value = preselectedSchoolId;
+    loadClassAllocationsForSchool();
+  }
+  openModal('classesAllocationModal');
+}
+
+async function loadClassAllocationsForSchool() {
+  const schoolId = document.getElementById('classAllocSchool').value;
+  const overviewList = document.getElementById('classAllocationsOverviewList');
+  if (!schoolId) {
+    overviewList.innerHTML = '<div class="empty-state">Select a school above to inspect classroom and subject faculty allocations.</div>';
+    return;
+  }
+
+  overviewList.innerHTML = '<div class="text-muted">Loading school faculty and classroom allocations...</div>';
+
+  try {
+    // Fetch teachers of this school to populate selects
+    const staffRes = await apiCall(`/super-admin/staff?schoolId=${schoolId}`);
+    currentSchoolStaff = extractList(staffRes.data, 'staff').filter(s => s.role === 'TEACHER');
+
+    // Populate dropdowns in the form
+    const teacherOptions = '<option value="">-- Choose Faculty --</option>' + 
+      currentSchoolStaff.map(t => `<option value="${t._id}">${t.name} (${t.subjects?.join(', ') || t.designation || 'Teacher'})</option>`).join('');
+
+    const classTeacherSelect = document.getElementById('allocClassTeacherSelect');
+    if (classTeacherSelect) classTeacherSelect.innerHTML = teacherOptions;
+
+    document.querySelectorAll('.sub-teacher-select').forEach(sel => {
+      sel.innerHTML = teacherOptions;
+    });
+
+    // Fetch classes of this school
+    const classesRes = await apiCall(`/super-admin/schools/${schoolId}/classes`);
+    const classes = extractList(classesRes.data, 'classes');
+
+    if (classes.length === 0) {
+      overviewList.innerHTML = `
+        <div class="empty-state">
+          No classroom allocations defined yet for this institution. Use the form below to allocate Class Teacher and Subject Teachers.
+        </div>`;
+      return;
+    }
+
+    overviewList.innerHTML = `
+      <div class="table-container glass-panel">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Class & Section</th>
+              <th>Designated Class Teacher</th>
+              <th>Room No</th>
+              <th>Subject Wise Faculty Allocations</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${classes.map(c => `
+              <tr>
+                <td><strong>${c.name} - ${c.section}</strong></td>
+                <td>
+                  <span class="badge badge-super">
+                    <i class="fa-solid fa-user-check"></i> ${c.classTeacher?.name || 'Not Designated'}
+                  </span>
+                </td>
+                <td>${c.roomNumber || 'N/A'}</td>
+                <td>
+                  ${(c.subjects && c.subjects.length > 0) ? c.subjects.map(sub => `
+                    <div style="font-size: 12px; margin-bottom: 2px;">
+                      <strong>${sub.name}:</strong> ${sub.teacher?.name || '<span class="text-muted">Unassigned</span>'}
+                    </div>
+                  `).join('') : '<span class="text-muted">No subject mappings</span>'}
+                </td>
+                <td>
+                  <button type="button" class="btn btn-sm btn-secondary" onclick="populateClassEdit('${c.name}', '${c.section}', '${c.roomNumber || ''}', '${c.classTeacher?._id || ''}')">
+                    <i class="fa-solid fa-pen"></i> Edit
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    overviewList.innerHTML = `<div class="text-danger">${err.message}</div>`;
+  }
+}
+
+function populateClassEdit(className, section, roomNo, classTeacherId) {
+  document.getElementById('allocClassName').value = className;
+  document.getElementById('allocSection').value = section;
+  document.getElementById('allocRoomNo').value = roomNo;
+  document.getElementById('allocClassTeacherSelect').value = classTeacherId;
+  showToast(`Loaded ${className}-${section} into form. Select subject teachers and click Commit.`, 'success');
+}
+
+async function submitClassAllocation(e) {
+  e.preventDefault();
+  const schoolId = document.getElementById('classAllocSchool').value;
+  if (!schoolId) {
+    showToast('Please select a school first', 'error');
+    return;
+  }
+
+  const submitBtn = document.getElementById('saveClassAllocSubmitBtn');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving Allocation...';
+
+  const subjects = [];
+  for (let i = 1; i <= 4; i++) {
+    const nameEl = document.getElementById(`sub${i}Name`);
+    const teacherEl = document.getElementById(`sub${i}TeacherSelect`);
+    if (nameEl && nameEl.value.trim()) {
+      subjects.push({
+        name: nameEl.value.trim(),
+        teacherId: teacherEl?.value || undefined
+      });
+    }
+  }
+
+  const body = {
+    className: document.getElementById('allocClassName').value.trim(),
+    section: document.getElementById('allocSection').value.trim() || 'A',
+    roomNumber: document.getElementById('allocRoomNo').value.trim(),
+    classTeacherId: document.getElementById('allocClassTeacherSelect').value || undefined,
+    subjects,
+  };
+
+  try {
+    await apiCall(`/super-admin/schools/${schoolId}/classes`, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    showToast(`Allocated teaching faculty to ${body.className}-${body.section}`, 'success');
+    loadClassAllocationsForSchool();
+    if (currentHubSchoolId === schoolId) {
+      loadHubClasses(schoolId);
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Commit Class & Faculty Mapping';
+  }
+}
+
+// ==========================================
+// 19. DIRECT FACULTY ATTENDANCE ROLL CALL
+// ==========================================
+function openMarkFacultyAttendanceModal(preselectedSchoolId) {
+  document.getElementById('markFacultyAttendanceForm').reset();
+  populateSchoolsSelect('markAttSchool');
+  document.getElementById('markAttDate').value = new Date().toISOString().split('T')[0];
+  if (preselectedSchoolId) {
+    document.getElementById('markAttSchool').value = preselectedSchoolId;
+    loadFacultyForAttendanceMarking();
+  }
+  openModal('markFacultyAttendanceModal');
+}
+
+async function loadFacultyForAttendanceMarking() {
+  const schoolId = document.getElementById('markAttSchool').value;
+  const facultySelect = document.getElementById('markAttFaculty');
+  if (!schoolId) {
+    facultySelect.innerHTML = '<option value="">-- Choose Faculty Member --</option>';
+    return;
+  }
+  try {
+    const res = await apiCall(`/super-admin/staff?schoolId=${schoolId}`);
+    const staff = extractList(res.data, 'staff');
+    facultySelect.innerHTML = '<option value="">-- Choose Faculty Member --</option>' + 
+      staff.map(st => `<option value="${st._id}">${st.name} (${st.role} • ${st.employeeId || 'ID'})</option>`).join('');
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function submitMarkFacultyAttendance(e) {
+  e.preventDefault();
+  const submitBtn = document.getElementById('markAttSubmitBtn');
+  submitBtn.disabled = true;
+
+  const body = {
+    schoolId: document.getElementById('markAttSchool').value,
+    teacherId: document.getElementById('markAttFaculty').value,
+    date: document.getElementById('markAttDate').value,
+    status: document.getElementById('markAttStatus').value,
+    notes: document.getElementById('markAttNotes').value.trim(),
+  };
+
+  try {
+    await apiCall('/super-admin/faculty-attendance/mark', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    showToast(`Attendance marked as ${body.status}`, 'success');
+    closeModal('markFacultyAttendanceModal');
+    if (currentHubSchoolId === body.schoolId) {
+      loadHubAttendance(body.schoolId);
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+
+async function quickMarkFacultyAttendance(teacherId, status) {
+  if (!currentHubSchoolId || !teacherId) return;
+  try {
+    await apiCall('/super-admin/faculty-attendance/mark', {
+      method: 'POST',
+      body: JSON.stringify({
+        schoolId: currentHubSchoolId,
+        teacherId,
+        status,
+        date: new Date().toISOString().split('T')[0],
+        notes: `Super Admin 1-tap quick mark: ${status}`
+      })
+    });
+    showToast(`Attendance updated to ${status}`, 'success');
+    loadHubAttendance(currentHubSchoolId);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ==========================================
+// 20. EXAM ASSESSMENT & RESULT PUBLISHING
+// ==========================================
+function openRecordExamModal(preselectedSchoolId) {
+  document.getElementById('recordExamForm').reset();
+  populateSchoolsSelect('recordExamSchool');
+  if (preselectedSchoolId) {
+    document.getElementById('recordExamSchool').value = preselectedSchoolId;
+    loadStudentsForExamRecord();
+  }
+  openModal('recordExamModal');
+}
+
+async function loadStudentsForExamRecord() {
+  const schoolId = document.getElementById('recordExamSchool').value;
+  const studentSelect = document.getElementById('recordExamStudent');
+  if (!schoolId) {
+    studentSelect.innerHTML = '<option value="">-- Choose Student --</option>';
+    return;
+  }
+  try {
+    const res = await apiCall(`/super-admin/students?schoolId=${schoolId}`);
+    const students = extractList(res.data, 'students');
+    studentSelect.innerHTML = '<option value="">-- Choose Student --</option>' +
+      students.map(st => `<option value="${st._id}">${st.firstName} ${st.lastName || ''} (${st.currentClass || 'Class 10'}-${st.section || 'A'} • Roll: ${st.rollNumber || '1'})</option>`).join('');
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function submitRecordExam(e) {
+  e.preventDefault();
+  const submitBtn = document.getElementById('recordExamSubmitBtn');
+  submitBtn.disabled = true;
+
+  const subjects = [];
+  for (let i = 1; i <= 5; i++) {
+    const nameEl = document.getElementById(`recordSub${i}Name`);
+    const markEl = document.getElementById(`recordSub${i}Marks`);
+    if (nameEl && markEl && markEl.value !== '') {
+      subjects.push({
+        name: nameEl.value.trim(),
+        maxMarks: 100,
+        marksObtained: Number(markEl.value),
+      });
+    }
+  }
+
+  const body = {
+    schoolId: document.getElementById('recordExamSchool').value,
+    studentId: document.getElementById('recordExamStudent').value,
+    examTitle: document.getElementById('recordExamTitle').value.trim(),
+    className: document.getElementById('recordExamClass').value.trim(),
+    section: document.getElementById('recordExamSection').value.trim() || 'A',
+    subjects,
+  };
+
+  try {
+    await apiCall('/super-admin/exams', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    showToast('Examination assessment recorded and published platform-wide', 'success');
+    closeModal('recordExamModal');
+    loadSuperAdminExams();
+    if (currentHubSchoolId === body.schoolId) {
+      loadHubExams(body.schoolId);
+    }
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+
+// ==========================================
+// 21. MASTER CAMPUS COMMAND HUB CONTROLLER
+// ==========================================
+let currentHubSchoolId = null;
+let currentHubSchool = null;
+
+async function openCampusHub(schoolId) {
+  currentHubSchoolId = schoolId;
+  openModal('campusHubModal');
+
+  // Load school details
+  try {
+    const res = await apiCall(`/super-admin/schools/${schoolId}`);
+    currentHubSchool = res.data.school;
+
+    document.getElementById('hubSchoolName').textContent = currentHubSchool.name;
+    document.getElementById('hubSchoolCode').textContent = currentHubSchool.code || '225';
+    document.getElementById('hubSchoolBoard').textContent = currentHubSchool.board || 'CBSE';
+    
+    const statusEl = document.getElementById('hubSchoolStatus');
+    statusEl.textContent = currentHubSchool.status;
+    statusEl.className = `status-pill ${currentHubSchool.status.toLowerCase()}`;
+
+    // Switch to first tab and load data
+    switchHubTab('students');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function switchHubTab(tabName) {
+  document.querySelectorAll('.modal-nav-tab').forEach(t => {
+    t.classList.toggle('active', t.getAttribute('data-hubtab') === tabName);
+  });
+  document.querySelectorAll('.hub-tab-pane').forEach(p => {
+    p.classList.remove('active');
+  });
+
+  const targetPane = document.getElementById(`hubPane${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+  if (targetPane) targetPane.classList.add('active');
+
+  if (!currentHubSchoolId) return;
+
+  if (tabName === 'students') loadHubStudents(currentHubSchoolId);
+  if (tabName === 'faculty') loadHubFaculty(currentHubSchoolId);
+  if (tabName === 'classes') loadHubClasses(currentHubSchoolId);
+  if (tabName === 'fleet') loadHubFleet(currentHubSchoolId);
+  if (tabName === 'attendance') loadHubAttendance(currentHubSchoolId);
+  if (tabName === 'exams') loadHubExams(currentHubSchoolId);
+}
+
+// Hub Data Loaders
+async function loadHubStudents(schoolId) {
+  const tbody = document.getElementById('hubStudentsTableBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading enrolled students...</td></tr>';
+  try {
+    const res = await apiCall(`/super-admin/students?schoolId=${schoolId}`);
+    const students = extractList(res.data, 'students');
+    document.getElementById('hubStudentsCount').textContent = students.length;
+
+    if (students.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center">No students enrolled in this campus yet. Click "+ Admit New Student" above.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = students.map(st => `
+      <tr>
+        <td><strong>${st.name || `${st.firstName || ''} ${st.lastName || ''}`.trim()}</strong></td>
+        <td>${st.currentClass || st.classId?.name || 'Class 10'} (${st.section || st.classId?.section || 'A'})</td>
+        <td><code>${st.rollNumber || st.admissionNumber || 'N/A'}</code></td>
+        <td>${st.parentName || st.parentId?.name || 'Guardian'}</td>
+        <td>${st.parentPhone || st.parentId?.phone || 'N/A'}</td>
+        <td><span class="status-pill active">ENROLLED</span></td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${err.message}</td></tr>`;
+  }
+}
+
+async function loadHubFaculty(schoolId) {
+  const tbody = document.getElementById('hubFacultyTableBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading campus faculty & staff...</td></tr>';
+  try {
+    const res = await apiCall(`/super-admin/staff?schoolId=${schoolId}`);
+    const staff = extractList(res.data, 'staff');
+    document.getElementById('hubStaffCount').textContent = staff.length;
+
+    if (staff.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center">No faculty onboarded into this campus yet. Click "+ Onboard Faculty / Staff" above.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = staff.map(st => `
+      <tr>
+        <td>
+          <div style="font-weight: 600;">${st.name}</div>
+          <div class="text-muted" style="font-size: 11px;">ID: ${st.employeeId || 'EMP-' + st._id.slice(-4)}</div>
+        </td>
+        <td><span class="badge badge-super">${st.role}</span></td>
+        <td>
+          <div>${st.designation || 'Educator'}</div>
+          <div class="text-muted" style="font-size: 11px;">${st.qualification || ''}</div>
+        </td>
+        <td><strong>${(st.subjects && st.subjects.length > 0) ? st.subjects.join(', ') : 'General'}</strong></td>
+        <td>
+          ${st.isClassTeacher ? `<span class="badge badge-super"><i class="fa-solid fa-chalkboard"></i> ${st.assignedClass?.name || 'Assigned'}</span>` : '<span class="text-muted">None</span>'}
+        </td>
+        <td>
+          <div>${st.email || 'N/A'}</div>
+          <div class="text-muted" style="font-size: 11px;">${st.phone || ''}</div>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${err.message}</td></tr>`;
+  }
+}
+
+async function loadHubClasses(schoolId) {
+  const container = document.getElementById('hubClassesContainer');
+  container.innerHTML = '<div class="text-muted">Loading classroom allocations...</div>';
+  try {
+    const res = await apiCall(`/super-admin/schools/${schoolId}/classes`);
+    const classes = extractList(res.data, 'classes');
+
+    if (classes.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          No classroom faculty allocations found for this school. Click "+ Add / Assign Class Faculty" above to assign Class Teachers and Subject Teachers.
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="table-container glass-panel">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Class & Section</th>
+              <th>Designated Class Teacher</th>
+              <th>Room No</th>
+              <th>Subject Wise Faculty Allocations</th>
+              <th>Quick Reassign</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${classes.map(c => `
+              <tr>
+                <td><strong>${c.name} - ${c.section}</strong></td>
+                <td>
+                  <span class="badge badge-super">
+                    <i class="fa-solid fa-user-check"></i> ${c.classTeacher?.name || 'Not Designated'}
+                  </span>
+                </td>
+                <td>${c.roomNumber || 'Room 101'}</td>
+                <td>
+                  ${(c.subjects && c.subjects.length > 0) ? c.subjects.map(sub => `
+                    <div style="font-size: 12.5px; margin-bottom: 3px;">
+                      <strong style="color: var(--primary);">${sub.name}:</strong> ${sub.teacher?.name || '<span class="text-muted">Unassigned</span>'}
+                    </div>
+                  `).join('') : '<span class="text-muted">No subject assignments</span>'}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-secondary" onclick="hubQuickAllocateClasses()">
+                    <i class="fa-solid fa-sliders"></i> Modify
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<div class="text-danger">${err.message}</div>`;
+  }
+}
+
+async function loadHubFleet(schoolId) {
+  const container = document.getElementById('hubFleetCardsContainer');
+  container.innerHTML = '<div class="text-muted">Loading bus fleet & telemetry...</div>';
+  try {
+    const res = await apiCall(`/super-admin/buses?schoolId=${schoolId}`);
+    const buses = extractList(res.data, 'buses');
+
+    if (buses.length === 0) {
+      container.innerHTML = '<div class="empty-state">No buses assigned to this campus. Click "+ Add Vehicle to Campus Fleet" above.</div>';
+      return;
+    }
+
+    container.innerHTML = buses.map(b => `
+      <div class="fleet-card glass-panel">
+        <div class="card-top">
+          <div class="card-title-group">
+            <h4>${b.busNumber}</h4>
+            <div class="card-subtitle">Reg: <code>${b.registrationNumber}</code></div>
+          </div>
+          <span class="status-pill active">${b.status.replace(/_/g, ' ')}</span>
+        </div>
+        <div class="telemetry-row">
+          <span>Driver:</span>
+          <strong>${b.driverName || 'Driver'} (${b.driverPhone || 'N/A'})</strong>
+        </div>
+        <div class="telemetry-row">
+          <span>Speed:</span>
+          <strong>${b.currentSpeedKmph || 0} km/h</strong>
+        </div>
+        <div class="telemetry-row">
+          <span>GPS Position:</span>
+          <strong>${b.currentLocation?.latitude ? b.currentLocation.latitude.toFixed(4) : '28.6139'}, ${b.currentLocation?.longitude ? b.currentLocation.longitude.toFixed(4) : '77.2090'}</strong>
+        </div>
+        <button class="btn btn-sm btn-primary" onclick="simulateBusGPS('${b._id}')">
+          <i class="fa-solid fa-satellite"></i> Simulate Live GPS Telemetry
+        </button>
+      </div>
+    `).join('');
+  } catch (err) {
+    container.innerHTML = `<div class="text-danger">${err.message}</div>`;
+  }
+}
+
+async function loadHubAttendance(schoolId) {
+  const tbody = document.getElementById('hubAttendanceTableBody');
+  tbody.innerHTML = '<tr><td colspan="5" class="text-center">Loading daily faculty roll call...</td></tr>';
+  try {
+    const [staffRes, attRes] = await Promise.all([
+      apiCall(`/super-admin/staff?schoolId=${schoolId}`),
+      apiCall(`/super-admin/biometric/faculty-attendance?schoolId=${schoolId}`)
+    ]);
+
+    const staff = extractList(staffRes.data, 'staff');
+    const attendanceRecords = extractList(attRes.data, 'records');
+
+    if (staff.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center">No faculty members found for this school.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = staff.map(st => {
+      const att = attendanceRecords.find(a => a.teacherId?._id === st._id || a.teacherId === st._id);
+      const status = att ? att.status : 'ABSENT';
+      const statusClass = status === 'PRESENT' ? 'active' : status === 'LATE' ? 'warning' : 'pending';
+
+      return `
+        <tr>
+          <td>
+            <strong>${st.name}</strong>
+            <div class="text-muted" style="font-size: 11px;">${st.role} • ${st.designation || 'Educator'}</div>
+          </td>
+          <td><code>${st.employeeId || 'EMP-' + st._id.slice(-4)}</code></td>
+          <td><span class="status-pill ${statusClass}">${status}</span></td>
+          <td>${att ? (att.isManualOverride ? 'Super Admin Manual' : 'Biometric Terminal') : 'Not Checked In'}</td>
+          <td>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn btn-sm btn-primary" onclick="quickMarkFacultyAttendance('${st._id}', 'PRESENT')" title="Mark Present">P</button>
+              <button class="btn btn-sm btn-secondary" onclick="quickMarkFacultyAttendance('${st._id}', 'LATE')" title="Mark Late">L</button>
+              <button class="btn btn-sm btn-secondary" onclick="quickMarkFacultyAttendance('${st._id}', 'ON_DUTY')" title="On Duty">OD</button>
+              <button class="btn btn-sm btn-ghost" onclick="quickMarkFacultyAttendance('${st._id}', 'ABSENT')" title="Mark Absent">A</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${err.message}</td></tr>`;
+  }
+}
+
+async function loadHubExams(schoolId) {
+  const tbody = document.getElementById('hubExamsTableBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading examinations...</td></tr>';
+  try {
+    const res = await apiCall(`/super-admin/exams?schoolId=${schoolId}`);
+    const exams = extractList(res.data, 'exams');
+
+    if (exams.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center">No assessments recorded for this school yet. Click "+ Record Student Marks" above.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = exams.map(ex => {
+      const subjectsText = (ex.subjects && ex.subjects.length > 0)
+        ? ex.subjects.map(s => `${s.subjectName || s.name}: ${s.marksObtained}/${s.maxMarks}`).join(', ')
+        : (ex.subject || 'Term Exam');
+
+      return `
+        <tr>
+          <td><strong>${ex.title || ex.examName || 'Assessment'}</strong></td>
+          <td>${ex.studentId?.firstName ? `${ex.studentId.firstName} ${ex.studentId.lastName || ''}` : 'Student'}</td>
+          <td>Class ${ex.classId?.name || '10'}</td>
+          <td style="font-size: 12px;">${subjectsText}</td>
+          <td>
+            ${ex.isPublished 
+              ? '<span class="status-pill active">PUBLISHED</span>' 
+              : '<span class="status-pill pending">PENDING APPROVAL</span>'}
+          </td>
+          <td>
+            ${!ex.isPublished ? `
+              <button class="btn btn-sm btn-primary" onclick="publishExamResult('${ex._id}')">
+                <i class="fa-solid fa-check"></i> Publish
+              </button>
+            ` : '<span class="text-muted" style="font-size: 11px;"><i class="fa-solid fa-lock"></i> Live</span>'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${err.message}</td></tr>`;
+  }
+}
+
+// Hub Quick Action Helpers
+function hubQuickAdmitStudent() {
+  openEnrollStudentModal(currentHubSchoolId);
+}
+function hubQuickOnboardFaculty() {
+  openOnboardStaffModal(currentHubSchoolId);
+}
+function hubQuickAllocateClasses() {
+  openClassesAllocationModal(currentHubSchoolId);
+}
+function hubQuickAddBus() {
+  openCreateBusModal();
+  if (currentHubSchoolId) document.getElementById('newBusSchool').value = currentHubSchoolId;
+}
+function hubQuickMarkAttendance() {
+  openMarkFacultyAttendanceModal(currentHubSchoolId);
+}
+function hubQuickRecordExam() {
+  openRecordExamModal(currentHubSchoolId);
 }

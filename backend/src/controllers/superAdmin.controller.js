@@ -12,7 +12,7 @@ const BusTracker = require('../models/busTracker.model');
 const AuditLog = require('../models/auditLog.model');
 const PlatformSetting = require('../models/platformSetting.model');
 const { ROLES } = require('../constants/roles');
-const { USER_STATUS, SCHOOL_STATUS, BUS_STATUS, BIOMETRIC_STATUS, FEE_STATUS } = require('../constants/status');
+const { USER_STATUS, SCHOOL_STATUS, BUS_STATUS, BIOMETRIC_STATUS, FEE_STATUS, EXAM_TYPES, ATTENDANCE_STATUS } = require('../constants/status');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiResponse = require('../utils/apiResponse');
 const ApiError = require('../utils/apiError');
@@ -899,15 +899,16 @@ const getSuperAdminExams = asyncHandler(async (req, res) => {
 
 const approvePublishExamResult = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { approvalStatus, isPublished, notes } = req.body;
+  const { approvalStatus = 'APPROVED', isPublished = true, notes } = req.body || {};
 
   const result = await ExamResult.findById(id);
   if (!result) throw new ApiError(404, 'Result record not found');
 
-  if (approvalStatus) result.approvalStatus = approvalStatus;
-  if (isPublished !== undefined) result.isPublished = isPublished;
+  result.approvalStatus = approvalStatus;
+  result.isPublished = isPublished !== undefined ? isPublished : true;
+  if (result.isPublished) result.publishedAt = new Date();
   result.approvedBy = req.user._id;
-  result.approvalNotes = notes || 'Approved by Super Admin';
+  result.approvalNotes = notes || 'Approved & Published by Super Admin';
   await result.save();
 
   await recordAudit({
@@ -1207,6 +1208,358 @@ const triggerSystemBackup = asyncHandler(async (req, res) => {
   );
 });
 
+// ==========================================
+// 13. SCHOOL-SPECIFIC WORKSPACE: ADMISSION, FACULTY, ALLOCATION & EXAMS
+// ==========================================
+const createSuperAdminStudent = asyncHandler(async (req, res) => {
+  const {
+    schoolId,
+    name,
+    firstName,
+    lastName,
+    rollNumber,
+    admissionNumber,
+    className,
+    section = 'A',
+    parentName,
+    parentPhone,
+    emergencyContact,
+    gender = 'MALE',
+    dateOfBirth,
+    bloodGroup,
+    address,
+  } = req.body;
+
+  const studentName = (name || `${firstName || ''} ${lastName || ''}`).trim();
+
+  if (!schoolId || !studentName) {
+    throw new ApiError(400, 'School and Student name are required');
+  }
+
+  const school = await School.findById(schoolId);
+  if (!school) throw new ApiError(404, 'School not found');
+
+  // Check school student limit
+  const currentCount = await Student.countDocuments({ schoolId });
+  const maxAllowed = school.limits?.maxStudents || 1000;
+  if (currentCount >= maxAllowed) {
+    throw new ApiError(403, `Admission Blocked: School student limit (${maxAllowed}) reached. Super Admin can expand limit in Permissions & Ceilings.`);
+  }
+
+  // Find or create Classroom
+  const clsName = className || 'Class 1';
+  let classroom = await ClassRoom.findOne({ schoolId, name: clsName, section });
+  if (!classroom) {
+    classroom = await ClassRoom.create({
+      schoolId,
+      name: clsName,
+      section,
+      capacity: 40,
+    });
+  }
+
+  // Find or create Parent user account
+  let parent = null;
+  const pPhone = parentPhone ? parentPhone.trim() : `98${Math.floor(10000000 + Math.random() * 90000000)}`;
+  parent = await User.findOne({ phone: pPhone });
+  if (!parent) {
+    parent = await User.create({
+      name: parentName || 'Parent / Guardian',
+      email: `parent.${pPhone}.${Date.now()}@scholarcloud.com`,
+      phone: pPhone,
+      password: 'Password@123',
+      role: ROLES.PARENT,
+      status: USER_STATUS.APPROVED,
+      isOtpVerified: true,
+      schoolId,
+    });
+  }
+
+  let roll = rollNumber;
+  if (!roll) {
+    const lastStudent = await Student.findOne({ classId: classroom._id }).sort({ rollNumber: -1 });
+    roll = lastStudent ? (lastStudent.rollNumber || 0) + 1 : 1;
+  }
+
+  let admNo = admissionNumber ? admissionNumber.trim() : `ADM-${school.code || 'SCH'}-${Date.now().toString().slice(-6)}`;
+  const existingAdm = await Student.findOne({ admissionNumber: admNo });
+  if (existingAdm) {
+    admNo = `ADM-${school.code || 'SCH'}-${Date.now().toString().slice(-5)}${Math.floor(Math.random() * 90 + 10)}`;
+  }
+
+  const student = await Student.create({
+    schoolId,
+    name: studentName,
+    rollNumber: Number(roll),
+    admissionNumber: admNo,
+    classId: classroom._id,
+    parentId: parent._id,
+    gender: gender || 'MALE',
+    dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date('2014-01-01'),
+    bloodGroup: bloodGroup || 'O+',
+    address: address || school.address || 'Campus Residence',
+    emergencyContact: emergencyContact || parentPhone || pPhone || '9876543210',
+    status: 'ACTIVE',
+  });
+
+  if (!parent.children.includes(student._id)) {
+    parent.children.push(student._id);
+    await parent.save({ validateBeforeSave: false });
+  }
+
+  await recordAudit({
+    action: 'SUPER_ADMIN_ENROLL_STUDENT',
+    performedBy: req.user._id,
+    targetEntity: 'Student',
+    targetId: student._id,
+    schoolId,
+    details: { name: student.name, admissionNumber: admNo, schoolName: school.name },
+  });
+
+  return res.status(201).json(new ApiResponse(201, student, `Student ${studentName} successfully enrolled in ${school.name}`));
+});
+
+const createSuperAdminStaff = asyncHandler(async (req, res) => {
+  const {
+    schoolId,
+    name,
+    email,
+    phone,
+    role = ROLES.TEACHER,
+    designation,
+    subjects = [],
+    isClassTeacher = false,
+    assignedClassName,
+    assignedClassSection = 'A',
+    salary,
+    qualification,
+    password = 'Password@123',
+  } = req.body;
+
+  if (!schoolId || !name || (!email && !phone)) {
+    throw new ApiError(400, 'Target School, Full Name, and Email or Phone are required');
+  }
+
+  const school = await School.findById(schoolId);
+  if (!school) throw new ApiError(404, 'School not found');
+
+  // Check teacher limit
+  const currentTeachers = await User.countDocuments({ schoolId, role: ROLES.TEACHER });
+  const maxAllowed = school.limits?.maxTeachers || 100;
+  if (role === ROLES.TEACHER && currentTeachers >= maxAllowed) {
+    throw new ApiError(403, `Staff Limit Exceeded: School teacher limit (${maxAllowed}) reached. Adjust quota in Permissions & Ceilings.`);
+  }
+
+  const cleanEmail = email && email.trim() ? email.trim().toLowerCase() : `staff.${Date.now()}@scholarcloud.com`;
+  if (email && email.trim()) {
+    const existing = await User.findOne({ email: cleanEmail });
+    if (existing) {
+      throw new ApiError(409, `User with email '${cleanEmail}' already exists in platform.`);
+    }
+  }
+
+  const cleanPhone = phone ? phone.trim() : `98${Math.floor(10000000 + Math.random() * 90000000)}`;
+
+  let assignedClassId = null;
+  if (assignedClassName) {
+    let classroom = await ClassRoom.findOne({ schoolId, name: assignedClassName, section: assignedClassSection });
+    if (!classroom) {
+      classroom = await ClassRoom.create({
+        schoolId,
+        name: assignedClassName,
+        section: assignedClassSection,
+        capacity: 40,
+      });
+    }
+    assignedClassId = classroom._id;
+  }
+
+  const parsedSubjects = Array.isArray(subjects)
+    ? subjects
+    : typeof subjects === 'string'
+    ? subjects.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
+  const staff = await User.create({
+    schoolId,
+    name: name.trim(),
+    email: cleanEmail,
+    phone: cleanPhone,
+    password,
+    role: role || ROLES.TEACHER,
+    designation: designation || (role === ROLES.TEACHER ? 'Senior Educator' : 'Staff Member'),
+    status: USER_STATUS.APPROVED,
+    isOtpVerified: true,
+    subjects: parsedSubjects,
+    isClassTeacher: Boolean(isClassTeacher && assignedClassId),
+    assignedClass: assignedClassId,
+    salary: salary ? Number(salary) : 45000,
+    qualification: qualification || 'B.Ed / Master Degree',
+    employeeId: `EMP-${(school.code || 'SCH').substring(0, 4)}-${Date.now().toString().slice(-4)}`,
+  });
+
+  if (isClassTeacher && assignedClassId) {
+    await ClassRoom.findByIdAndUpdate(assignedClassId, { classTeacher: staff._id });
+  }
+
+  await recordAudit({
+    action: 'SUPER_ADMIN_ADD_STAFF',
+    performedBy: req.user._id,
+    targetEntity: 'User',
+    targetId: staff._id,
+    schoolId,
+    details: { name: staff.name, role: staff.role, schoolName: school.name, subjects: parsedSubjects },
+  });
+
+  return res.status(201).json(new ApiResponse(201, staff, `Faculty member ${name} onboarded into ${school.name}`));
+});
+
+const getSchoolClasses = asyncHandler(async (req, res) => {
+  const { schoolId } = req.params;
+  const classes = await ClassRoom.find({ schoolId })
+    .populate('classTeacher', 'name email phone subjects designation')
+    .populate('subjects.teacher', 'name email phone subjects designation')
+    .sort({ name: 1, section: 1 });
+
+  return res.status(200).json(new ApiResponse(200, classes, 'School classrooms and teaching allocation retrieved'));
+});
+
+const assignClassFaculty = asyncHandler(async (req, res) => {
+  const { schoolId } = req.params;
+  const { className, section = 'A', classTeacherId, roomNumber, subjects = [] } = req.body;
+
+  let classroom = await ClassRoom.findOne({ schoolId, name: className, section });
+  if (!classroom) {
+    classroom = new ClassRoom({
+      schoolId,
+      name: className,
+      section,
+      roomNumber: roomNumber || '',
+    });
+  } else if (roomNumber) {
+    classroom.roomNumber = roomNumber;
+  }
+
+  if (classTeacherId) {
+    classroom.classTeacher = classTeacherId;
+    await User.findByIdAndUpdate(classTeacherId, {
+      isClassTeacher: true,
+      assignedClass: classroom._id,
+    });
+  }
+
+  if (Array.isArray(subjects) && subjects.length > 0) {
+    classroom.subjects = subjects.map(s => ({
+      name: s.name,
+      code: s.code || '',
+      teacher: s.teacherId || null,
+    }));
+  }
+
+  await classroom.save();
+
+  await recordAudit({
+    action: 'ASSIGN_CLASS_FACULTY',
+    performedBy: req.user._id,
+    targetEntity: 'ClassRoom',
+    targetId: classroom._id,
+    schoolId,
+    details: { className, section, classTeacherId, subjectsCount: subjects.length },
+  });
+
+  return res.status(200).json(new ApiResponse(200, classroom, `Class ${className}-${section} faculty allocation committed`));
+});
+
+const recordSuperAdminExam = asyncHandler(async (req, res) => {
+  const { schoolId, studentId, className, section = 'A', examTitle = 'Term Assessment', subjects = [] } = req.body;
+
+  if (!schoolId || !studentId) {
+    throw new ApiError(400, 'School and Student are required to record assessment');
+  }
+
+  const student = await Student.findById(studentId);
+  if (!student) throw new ApiError(404, 'Student not found');
+
+  const classroom = (await ClassRoom.findOne({ schoolId, name: className, section })) || student.classId;
+
+  const totalMax = subjects.reduce((sum, s) => sum + (Number(s.maxMarks) || 100), 0);
+  const totalObt = subjects.reduce((sum, s) => sum + (Number(s.marksObtained) || 0), 0);
+  const percentage = totalMax > 0 ? (totalObt / totalMax) * 100 : 0;
+
+  const examResult = await ExamResult.create({
+    schoolId,
+    studentId,
+    classId: classroom._id || classroom,
+    examType: req.body.examType || EXAM_TYPES.MONTHLY,
+    examTitle,
+    subjects: subjects.map(s => ({
+      subjectName: s.name || s.subjectName,
+      maxMarks: Number(s.maxMarks) || 100,
+      marksObtained: Number(s.marksObtained) || 0,
+      grade: s.grade || (s.marksObtained >= 90 ? 'A+' : s.marksObtained >= 75 ? 'A' : 'B'),
+    })),
+    totalMaxMarks: totalMax,
+    totalMarksObtained: totalObt,
+    percentage,
+    approvalStatus: 'APPROVED',
+    isPublished: true,
+    publishedAt: new Date(),
+    approvedBy: req.user._id,
+  });
+
+  await recordAudit({
+    action: 'RECORD_STUDENT_EXAM',
+    performedBy: req.user._id,
+    targetEntity: 'ExamResult',
+    targetId: examResult._id,
+    schoolId,
+    details: { studentName: student.name, percentage: `${percentage.toFixed(1)}%` },
+  });
+
+  return res.status(201).json(new ApiResponse(201, examResult, `Exam result successfully published for ${student.name}`));
+});
+
+const markFacultyAttendanceSuperAdmin = asyncHandler(async (req, res) => {
+  const { schoolId, teacherId, status = 'PRESENT', date, notes } = req.body;
+  if (!schoolId || !teacherId) {
+    throw new ApiError(400, 'School and Faculty member are required');
+  }
+
+  const targetDate = date || new Date().toISOString().split('T')[0];
+  let attendance = await Attendance.findOne({ schoolId, teacherId, date: targetDate, attendanceType: 'FACULTY' });
+
+  if (attendance) {
+    attendance.status = status;
+    attendance.isManualOverride = true;
+    attendance.overriddenBy = req.user._id;
+    attendance.overrideReason = notes || 'Super Admin manual roll call';
+    await attendance.save();
+  } else {
+    attendance = await Attendance.create({
+      schoolId,
+      teacherId,
+      attendanceType: 'FACULTY',
+      date: targetDate,
+      status,
+      isManualOverride: true,
+      overriddenBy: req.user._id,
+      overrideReason: notes || 'Super Admin registered faculty punch',
+      checkInTime: new Date(),
+    });
+  }
+
+  await recordAudit({
+    action: 'SUPER_ADMIN_MARK_ATTENDANCE',
+    performedBy: req.user._id,
+    targetEntity: 'Attendance',
+    targetId: attendance._id,
+    schoolId,
+    details: { teacherId, status, date: targetDate },
+  });
+
+  return res.status(200).json(new ApiResponse(200, attendance, `Faculty attendance marked as ${status}`));
+});
+
 module.exports = {
   getSuperAdminDashboard,
   // Schools
@@ -1228,15 +1581,21 @@ module.exports = {
   // Students & Admissions
   getSuperAdminStudents,
   getAdmissionStats,
-  // Staff
+  createSuperAdminStudent,
+  // Staff & Faculty
   getSuperAdminStaff,
   getDuplicateEmployeeRecords,
+  createSuperAdminStaff,
+  // Classes & Allocations
+  getSchoolClasses,
+  assignClassFaculty,
   // Biometric & GPS
   getAllBiometricDevices,
   createBiometricDevice,
   syncBiometricDevice,
   getFacultyAttendanceReports,
   recordManualAttendanceOverride,
+  markFacultyAttendanceSuperAdmin,
   // Fleet
   getAllBuses,
   createBus,
@@ -1246,6 +1605,7 @@ module.exports = {
   getSuperAdminExams,
   approvePublishExamResult,
   correctExamResult,
+  recordSuperAdminExam,
   // Financials
   getFinancialsOverview,
   recordFeeCorrection,
