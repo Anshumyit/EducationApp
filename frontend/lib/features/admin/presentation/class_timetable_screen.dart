@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_card.dart';
@@ -102,22 +101,38 @@ class _ClassTimetableScreenState extends ConsumerState<ClassTimetableScreen> {
     final teachers = ref.read(adminProvider).teachers;
     final subjects = (_classroomData?['subjects'] as List<dynamic>?) ?? (widget.classroom['subjects'] as List<dynamic>?) ?? [];
 
+    final existingPeriodNum = existingPeriod != null ? existingPeriod['periodNumber'] : null;
     final periodNumCtrl = TextEditingController(
-      text: existingPeriod != null
-          ? '${existingPeriod['periodNumber'] ?? 1}'
+      text: existingPeriodNum != null
+          ? '$existingPeriodNum'
           : '${(_timetableByDay[_selectedDay]?.length ?? 0) + 1}',
     );
 
-    final subjectCtrl = TextEditingController(text: existingPeriod?['subject'] ?? (subjects.isNotEmpty ? subjects.first['name'] : 'Mathematics'));
-    final startTimeCtrl = TextEditingController(text: existingPeriod?['startTime'] ?? '08:30 AM');
-    final endTimeCtrl = TextEditingController(text: existingPeriod?['endTime'] ?? '09:15 AM');
-    final roomCtrl = TextEditingController(text: existingPeriod?['roomNumber'] ?? widget.classroom['roomNumber'] ?? 'Room 101');
+    final existingSubject = existingPeriod != null ? existingPeriod['subject']?.toString() : null;
+    final existingStartTime = existingPeriod != null ? existingPeriod['startTime']?.toString() : null;
+    final existingEndTime = existingPeriod != null ? existingPeriod['endTime']?.toString() : null;
+    final existingRoom = existingPeriod != null ? existingPeriod['roomNumber']?.toString() : null;
+    final classroomRoom = widget.classroom != null ? widget.classroom['roomNumber']?.toString() : null;
 
-    String? selectedTeacherId = existingPeriod?['teacher'] is Map
-        ? existingPeriod?['teacher']['_id']
-        : existingPeriod?['teacher'];
+    final subjectCtrl = TextEditingController(
+      text: existingSubject ?? (subjects.isNotEmpty ? subjects.first['name']?.toString() ?? 'Mathematics' : 'Mathematics'),
+    );
+    final startTimeCtrl = TextEditingController(text: existingStartTime ?? '08:30 AM');
+    final endTimeCtrl = TextEditingController(text: existingEndTime ?? '09:15 AM');
+    final roomCtrl = TextEditingController(text: existingRoom ?? classroomRoom ?? 'Room 101');
 
-    String? selectedTeacherName = existingPeriod?['teacherName'];
+    String? selectedTeacherId;
+    String? selectedTeacherName;
+
+    if (existingPeriod != null) {
+      final t = existingPeriod['teacher'];
+      if (t is Map) {
+        selectedTeacherId = t['_id']?.toString();
+      } else if (t != null) {
+        selectedTeacherId = t.toString();
+      }
+      selectedTeacherName = existingPeriod['teacherName']?.toString();
+    }
 
     if (selectedTeacherId == null && teachers.isNotEmpty) {
       selectedTeacherId = teachers.first['_id'];
@@ -346,7 +361,11 @@ class _ClassTimetableScreenState extends ConsumerState<ClassTimetableScreen> {
                     _timetableByDay[_selectedDay]!.add(periodObj);
                   }
                   // Sort periods by periodNumber
-                  _timetableByDay[_selectedDay]!.sort((a, b) => (a['periodNumber'] as int).compareTo(b['periodNumber'] as int));
+                  _timetableByDay[_selectedDay]!.sort((a, b) {
+                    final aNum = int.tryParse(a['periodNumber']?.toString() ?? '0') ?? 0;
+                    final bNum = int.tryParse(b['periodNumber']?.toString() ?? '0') ?? 0;
+                    return aNum.compareTo(bNum);
+                  });
                 });
 
                 Navigator.pop(ctx);
@@ -490,7 +509,7 @@ class _ClassTimetableScreenState extends ConsumerState<ClassTimetableScreen> {
                             final startTime = p['startTime'] ?? '--:--';
                             final endTime = p['endTime'] ?? '--:--';
                             final teacherName = p['teacherName'] ?? 'Unassigned Teacher';
-                            final room = p['roomNumber'] ?? widget.classroom['roomNumber'] ?? '';
+                            final String roomStr = (p['roomNumber'] ?? widget.classroom['roomNumber'] ?? '').toString();
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -569,10 +588,10 @@ class _ClassTimetableScreenState extends ConsumerState<ClassTimetableScreen> {
                                                   overflow: TextOverflow.ellipsis,
                                                 ),
                                               ),
-                                              if (room.isNotEmpty) ...[
+                                              if (roomStr.isNotEmpty) ...[
                                                 const SizedBox(width: 6),
                                                 Text(
-                                                  '• $room',
+                                                  '• $roomStr',
                                                   style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
                                                 ),
                                               ],

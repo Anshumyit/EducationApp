@@ -426,27 +426,32 @@ const updateApprovalStatus = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const { status, remarks } = req.body;
 
-  if (![USER_STATUS.APPROVED, USER_STATUS.REJECTED].includes(status)) {
+  if (![USER_STATUS.APPROVED, USER_STATUS.REJECTED, USER_STATUS.PENDING].includes(status)) {
     throw new ApiError(400, 'Invalid status. Must be APPROVED or REJECTED');
   }
 
-  const user = await User.findById(userId);
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { status },
+    { new: true }
+  );
   if (!user) throw new ApiError(404, 'User not found');
 
-  user.status = status;
-  await user.save();
-
-  await NotificationService.sendNotification({
-    title: status === USER_STATUS.APPROVED ? 'Account Approved 🎉' : 'Registration Status Update',
-    message:
-      status === USER_STATUS.APPROVED
-        ? `Congratulations ${user.name}! Your ${user.role.toLowerCase()} account has been approved by the School Admin. You can now log in.`
-        : `Your account application was reviewed: ${remarks || 'Rejected by Admin'}.`,
-    type: 'BROADCAST',
-    targetRole: 'SPECIFIC',
-    recipientId: user._id,
-    senderId: req.user._id,
-  });
+  try {
+    await NotificationService.sendNotification({
+      title: status === USER_STATUS.APPROVED ? 'Account Approved 🎉' : 'Registration Status Update',
+      message:
+        status === USER_STATUS.APPROVED
+          ? `Congratulations ${user.name}! Your ${user.role.toLowerCase()} account has been approved by the School Admin. You can now log in.`
+          : `Your account application was reviewed: ${remarks || 'Rejected by Admin'}.`,
+      type: 'BROADCAST',
+      targetRole: 'SPECIFIC',
+      recipientId: user._id,
+      senderId: req.user._id,
+    });
+  } catch (notifErr) {
+    console.error('Notification dispatch error (non-fatal):', notifErr.message);
+  }
 
   return res.status(200).json(
     new ApiResponse(200, user, `User account ${status.toLowerCase()} successfully`)

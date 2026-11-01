@@ -181,12 +181,14 @@ class AdminNotifier extends StateNotifier<AdminState> {
       _resyncApprovalsQuietly();
       return true;
     } on DioException catch (e) {
+      final serverMsg = e.response?.data is Map ? e.response?.data['message']?.toString() : null;
+      final msg = serverMsg ?? e.error?.toString() ?? 'Failed to update approval status';
       // Revert if API fails
       state = state.copyWith(
         pendingApprovals: previousPending,
         teachers: previousTeachers,
         stats: previousStats ?? state.stats,
-        errorMessage: e.error?.toString() ?? 'Failed to update approval status',
+        errorMessage: msg,
       );
       return false;
     }

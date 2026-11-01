@@ -16,7 +16,7 @@ class UserApprovalsScreen extends ConsumerStatefulWidget {
 }
 
 class _UserApprovalsScreenState extends ConsumerState<UserApprovalsScreen> {
-  final Set<String> _processingUserIds = {};
+  final Map<String, String> _processingActions = {};
 
   @override
   void initState() {
@@ -29,10 +29,10 @@ class _UserApprovalsScreenState extends ConsumerState<UserApprovalsScreen> {
 
   Future<void> _handleApproval(dynamic user, String status) async {
     final userId = user['_id']?.toString() ?? '';
-    if (userId.isEmpty || _processingUserIds.contains(userId)) return;
+    if (userId.isEmpty || _processingActions.containsKey(userId)) return;
 
     setState(() {
-      _processingUserIds.add(userId);
+      _processingActions[userId] = status;
     });
 
     final userName = user['name'] ?? 'User';
@@ -45,7 +45,7 @@ class _UserApprovalsScreenState extends ConsumerState<UserApprovalsScreen> {
     if (!mounted) return;
 
     setState(() {
-      _processingUserIds.remove(userId);
+      _processingActions.remove(userId);
     });
 
     if (success) {
@@ -121,7 +121,9 @@ class _UserApprovalsScreenState extends ConsumerState<UserApprovalsScreen> {
                   final userId = user['_id']?.toString() ?? '';
                   final isTeacher = user['role'] == 'TEACHER';
                   final subjects = user['subjects'] as List<dynamic>? ?? [];
-                  final isBusy = _processingUserIds.contains(userId);
+                  final isApproving = _processingActions[userId] == 'APPROVED';
+                  final isRejecting = _processingActions[userId] == 'REJECTED';
+                  final isBusy = isApproving || isRejecting;
 
                   return GlassCard(
                     padding: const EdgeInsets.all(18),
@@ -230,7 +232,7 @@ class _UserApprovalsScreenState extends ConsumerState<UserApprovalsScreen> {
                                 icon: Icons.check_circle_rounded,
                                 color: AppColors.emerald,
                                 height: 44,
-                                isLoading: isBusy,
+                                isLoading: isApproving,
                                 onPressed: isBusy ? null : () => _handleApproval(user, 'APPROVED'),
                               ),
                             ),
@@ -240,8 +242,8 @@ class _UserApprovalsScreenState extends ConsumerState<UserApprovalsScreen> {
                                 text: 'Reject',
                                 icon: Icons.cancel_rounded,
                                 color: AppColors.rose,
-                                isOutlined: true,
                                 height: 44,
+                                isLoading: isRejecting,
                                 onPressed: isBusy ? null : () => _handleApproval(user, 'REJECTED'),
                               ),
                             ),

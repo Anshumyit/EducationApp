@@ -41,8 +41,8 @@ const { verifyJWT } = require('../middlewares/auth.middleware');
 const { authorizeRoles } = require('../middlewares/role.middleware');
 const { ROLES } = require('../constants/roles');
 
-// All admin routes require ADMIN role
-router.use(verifyJWT, authorizeRoles(ROLES.ADMIN));
+// Admin routes require ADMIN or SUPER_ADMIN role
+router.use(verifyJWT, authorizeRoles(ROLES.ADMIN, ROLES.SUPER_ADMIN));
 
 // 1. Dashboard
 router.get('/stats', getDashboardStats);

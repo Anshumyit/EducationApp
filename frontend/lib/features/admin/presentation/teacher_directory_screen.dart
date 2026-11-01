@@ -448,7 +448,7 @@ class TeacherDirectoryScreen extends ConsumerWidget {
                             children: [
                               Expanded(
                                 child: CustomButton(
-                                  text: 'Approve Faculty',
+                                  text: 'Approve',
                                   icon: Icons.check_circle_rounded,
                                   color: AppColors.emerald,
                                   height: 42,
@@ -471,23 +471,110 @@ class TeacherDirectoryScreen extends ConsumerWidget {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: CustomButton(
-                                  text: 'Issue Slip',
+                                  text: 'Reject',
+                                  icon: Icons.cancel_rounded,
+                                  color: AppColors.rose,
+                                  height: 42,
+                                  onPressed: () async {
+                                    final ok = await ref
+                                        .read(adminProvider.notifier)
+                                        .updateApprovalStatus(t['_id'], 'REJECTED');
+                                    if (context.mounted && ok) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: AppColors.rose,
+                                          behavior: SnackBarBehavior.floating,
+                                          content: Text('${t['name']} registration rejected'),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ] else if (t['status'] == 'REJECTED') ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CustomButton(
+                                  text: 'Re-Approve',
+                                  icon: Icons.check_circle_rounded,
+                                  color: AppColors.emerald,
+                                  height: 42,
+                                  onPressed: () async {
+                                    final ok = await ref
+                                        .read(adminProvider.notifier)
+                                        .updateApprovalStatus(t['_id'], 'APPROVED');
+                                    if (context.mounted && ok) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: AppColors.emerald,
+                                          behavior: SnackBarBehavior.floating,
+                                          content: Text('${t['name']} has been approved!'),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: CustomButton(
+                                  text: 'Issue Salary Slip',
                                   icon: Icons.payments_outlined,
                                   isOutlined: true,
                                   height: 42,
                                   onPressed: () => _showSalarySlipDialog(context, ref, t),
                                 ),
                               ),
+                              const SizedBox(width: 10),
+                              IconButton(
+                                icon: const Icon(Icons.block_rounded, color: AppColors.rose, size: 20),
+                                tooltip: 'Revoke / Reject Faculty',
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      backgroundColor: AppColors.surface,
+                                      title: const Text('Revoke Faculty Access?'),
+                                      content: Text('Are you sure you want to mark ${t['name']} as REJECTED?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx, false),
+                                          child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.rose),
+                                          onPressed: () => Navigator.pop(ctx, true),
+                                          child: const Text('Revoke / Reject', style: TextStyle(color: Colors.white)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true) {
+                                    final ok = await ref
+                                        .read(adminProvider.notifier)
+                                        .updateApprovalStatus(t['_id'], 'REJECTED');
+                                    if (context.mounted && ok) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: AppColors.rose,
+                                          behavior: SnackBarBehavior.floating,
+                                          content: Text('${t['name']} status set to REJECTED'),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
                             ],
-                          ),
-                        ] else ...[
-                          // Salary Action
-                          CustomButton(
-                            text: 'Issue Salary Slip',
-                            icon: Icons.payments_outlined,
-                            isOutlined: true,
-                            height: 42,
-                            onPressed: () => _showSalarySlipDialog(context, ref, t),
                           ),
                         ],
                       ],
