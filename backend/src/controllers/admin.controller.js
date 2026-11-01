@@ -504,8 +504,9 @@ const createClassRoom = asyncHandler(async (req, res) => {
  */
 const getAllClasses = asyncHandler(async (req, res) => {
   const classes = await ClassRoom.find()
-    .populate('classTeacher', 'name email phone subjects')
-    .populate('subjects.teacher', 'name email phone');
+    .populate('classTeacher', 'name email phone subjects avatar')
+    .populate('subjects.teacher', 'name email phone avatar')
+    .populate('timetable.periods.teacher', 'name email phone avatar');
 
   // Attach student count to each classroom
   const classesWithCounts = await Promise.all(
@@ -518,6 +519,115 @@ const getAllClasses = asyncHandler(async (req, res) => {
   );
 
   return res.status(200).json(new ApiResponse(200, classesWithCounts, 'Classes retrieved'));
+});
+
+/**
+ * Class Timetable: Get timetable of a classroom
+ */
+const getClassTimetable = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const classroom = await ClassRoom.findById(id)
+    .populate('classTeacher', 'name email phone avatar')
+    .populate('subjects.teacher', 'name email phone avatar')
+    .populate('timetable.periods.teacher', 'name email phone avatar');
+
+  if (!classroom) throw new ApiError(404, 'Classroom not found');
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        classroom: {
+          _id: classroom._id,
+          name: classroom.name,
+          section: classroom.section,
+          roomNumber: classroom.roomNumber,
+          classTeacher: classroom.classTeacher,
+          subjects: classroom.subjects,
+        },
+        timetable: classroom.timetable || [],
+      },
+      'Class timetable retrieved successfully'
+    )
+  );
+});
+
+/**
+ * Class Timetable: Update/Save full timetable of a classroom
+ */
+const updateClassTimetable = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  let { timetable } = req.body;
+
+  const classroom = await ClassRoom.findById(id);
+  if (!classroom) throw new ApiError(404, 'Classroom not found');
+
+  if (Array.isArray(timetable)) {
+    // Fill teacherName if teacher ObjectId is provided
+    for (const daySchedule of timetable) {
+      if (Array.isArray(daySchedule.periods)) {
+        for (const period of daySchedule.periods) {
+          if (period.teacher && !period.teacherName) {
+            const teacherUser = await User.findById(period.teacher);
+            if (teacherUser) period.teacherName = teacherUser.name;
+          }
+        }
+      }
+    }
+    classroom.timetable = timetable;
+    await classroom.save();
+  }
+
+  const updatedClassroom = await ClassRoom.findById(id)
+    .populate('classTeacher', 'name email phone avatar')
+    .populate('subjects.teacher', 'name email phone avatar')
+    .populate('timetable.periods.teacher', 'name email phone avatar');
+
+  return res.status(200).json(
+    new ApiResponse(200, updatedClassroom, 'Class timetable saved successfully')
+  );
+});
+
+/**
+ * Assign Subject Teacher to Classroom
+ */
+const assignSubjectTeacher = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { subjectName, teacherId, code } = req.body;
+
+  const classroom = await ClassRoom.findById(id);
+  if (!classroom) throw new ApiError(404, 'Classroom not found');
+
+  if (teacherId) {
+    const teacherUser = await User.findOne({ _id: teacherId, role: ROLES.TEACHER });
+    if (!teacherUser) throw new ApiError(404, 'Teacher not found');
+  }
+
+  const subjectIndex = classroom.subjects.findIndex(
+    (s) => s.name.trim().toLowerCase() === (subjectName || '').trim().toLowerCase()
+  );
+
+  if (subjectIndex >= 0) {
+    classroom.subjects[subjectIndex].teacher = teacherId || null;
+    if (code) classroom.subjects[subjectIndex].code = code;
+  } else {
+    classroom.subjects.push({
+      name: subjectName,
+      code: code || '',
+      teacher: teacherId || null,
+    });
+  }
+
+  await classroom.save();
+
+  const populated = await ClassRoom.findById(id)
+    .populate('classTeacher', 'name email phone avatar')
+    .populate('subjects.teacher', 'name email phone avatar')
+    .populate('timetable.periods.teacher', 'name email phone avatar');
+
+  return res.status(200).json(
+    new ApiResponse(200, populated, `Subject '${subjectName}' teacher updated successfully`)
+  );
 });
 
 /**
@@ -1217,6 +1327,9 @@ module.exports = {
   updateClassRoom,
   deleteClassRoom,
   assignClassTeacher,
+  getClassTimetable,
+  updateClassTimetable,
+  assignSubjectTeacher,
   getFeesOverview,
   getAllFeeRecords,
   generateFeeInvoices,

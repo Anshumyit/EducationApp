@@ -5,6 +5,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/stat_card.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../notifications/presentation/notifications_screen.dart';
+import '../../notifications/providers/notification_provider.dart';
 import '../providers/admin_provider.dart';
 import 'admin_attendance_screen.dart';
 import 'broadcast_screen.dart';
@@ -75,6 +77,25 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ],
         ),
         actions: [
+          Consumer(
+            builder: (context, ref, _) {
+              final unreadCount = ref.watch(notificationProvider).unreadCount;
+              return IconButton(
+                icon: Badge(
+                  isLabelVisible: unreadCount > 0,
+                  label: Text('$unreadCount'),
+                  child: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+                ),
+                tooltip: 'Notifications & Alerts',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                  );
+                },
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
             tooltip: 'Refresh',

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   createHomework,
+  uploadHomeworkAttachment,
   getClassHomework,
   getHomeworkSubmissions,
   gradeSubmission,
@@ -16,6 +17,7 @@ router.use(verifyJWT);
 
 // Creating & Managing homework
 router.post('/', authorizeRoles(ROLES.TEACHER, ROLES.ADMIN), createHomework);
+router.post('/upload', authorizeRoles(ROLES.TEACHER, ROLES.ADMIN), uploadHomeworkAttachment);
 router.get('/class/:classId', getClassHomework);
 router.delete('/:homeworkId', authorizeRoles(ROLES.TEACHER, ROLES.ADMIN), deleteHomework);
 

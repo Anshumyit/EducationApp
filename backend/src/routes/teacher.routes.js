@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   getMyClassInfo,
+  getMyTeachingSchedule,
   getClassStudents,
   getStudentDetail,
   sendClassNotice,
@@ -20,6 +21,7 @@ const { ROLES } = require('../constants/roles');
 router.use(verifyJWT, authorizeRoles(ROLES.TEACHER, ROLES.ADMIN));
 
 router.get('/class-info', getMyClassInfo);
+router.get('/schedule', getMyTeachingSchedule);
 router.get('/classes', getAllClassroomsForTeacher);
 router.get('/students', getClassStudents);
 router.get('/students/:studentId', getStudentDetail);

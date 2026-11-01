@@ -12,6 +12,7 @@ import 'bus_fleet_screen.dart';
 import 'central_broadcast_screen.dart';
 import 'permission_matrix_screen.dart';
 import 'schools_management_screen.dart';
+import '../../admin/presentation/class_management_screen.dart';
 
 class SuperAdminDashboardScreen extends ConsumerStatefulWidget {
   const SuperAdminDashboardScreen({super.key});
@@ -236,6 +237,22 @@ class _SuperAdminDashboardScreenState extends ConsumerState<SuperAdminDashboardS
                       icon: Icons.campaign_rounded,
                       color: AppColors.rose,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CentralBroadcastScreen())),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildActionTile(
+                      context,
+                      title: 'Classes & Faculty Timetable',
+                      subtitle: 'Classrooms, periods & teachers',
+                      icon: Icons.calendar_month_rounded,
+                      color: AppColors.primary,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClassManagementScreen())),
                     ),
                   ),
                 ],

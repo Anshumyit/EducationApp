@@ -23,6 +23,8 @@ const {
   createSuperAdminStaff,
   getSchoolClasses,
   assignClassFaculty,
+  getClassTimetableSuperAdmin,
+  updateClassTimetableSuperAdmin,
   getAllBiometricDevices,
   createBiometricDevice,
   syncBiometricDevice,
@@ -68,6 +70,8 @@ router.patch('/schools/:id/status', updateSchoolStatus);
 // School Specific Classrooms & Faculty Allocation
 router.get('/schools/:schoolId/classes', getSchoolClasses);
 router.post('/schools/:schoolId/classes', assignClassFaculty);
+router.get('/classes/:classId/timetable', getClassTimetableSuperAdmin);
+router.put('/classes/:classId/timetable', updateClassTimetableSuperAdmin);
 
 // 3. School Admin Accounts
 router.get('/admins', getAllAdmins);

@@ -62,9 +62,12 @@ class ApiConstants {
   static const String adminExamsOverview = '/admin/exams/overview';
   static const String adminPublishExams = '/admin/exams/publish';
   static const String adminSettings = '/admin/settings';
+  static String classTimetable(String classId) => '/admin/classes/$classId/timetable';
+  static String assignSubjectTeacher(String classId) => '/admin/classes/$classId/assign-subject-teacher';
 
   // Teacher endpoints
   static const String teacherClassInfo = '/teacher/class-info';
+  static const String teacherSchedule = '/teacher/schedule';
   static const String teacherClasses = '/teacher/classes';
   static const String teacherStudents = '/teacher/students';
   static const String teacherNotice = '/teacher/notice';
@@ -85,6 +88,7 @@ class ApiConstants {
 
   // Homework endpoints
   static const String homework = '/homework';
+  static const String homeworkUpload = '/homework/upload';
   static String classHomework(String classId) => '/homework/class/$classId';
   static String homeworkSubmissions(String homeworkId) => '/homework/$homeworkId/submissions';
   static String gradeHomework(String homeworkId, String studentId) => '/homework/$homeworkId/grade/$studentId';
@@ -114,6 +118,7 @@ class ApiConstants {
   // Parent endpoints
   static const String parentChildren = '/parent/children';
   static const String parentDashboard = '/parent/child';
+  static String childTimetable(String studentId) => '/parent/child/$studentId/timetable';
   static const String holidays = '/parent/holidays';
 
   // Notifications

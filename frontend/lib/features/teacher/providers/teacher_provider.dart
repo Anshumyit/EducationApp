@@ -6,7 +6,9 @@ import '../../../core/network/dio_client.dart';
 
 class TeacherState {
   final bool isLoading;
+  final bool isLoadingSchedule;
   final Map<String, dynamic>? classInfo;
+  final Map<String, dynamic>? teachingSchedule;
   final List<dynamic> students;
   final List<dynamic> leaveRequests;
   final List<dynamic> salarySlips;
@@ -20,7 +22,9 @@ class TeacherState {
 
   TeacherState({
     this.isLoading = false,
+    this.isLoadingSchedule = false,
     this.classInfo,
+    this.teachingSchedule,
     this.students = const [],
     this.leaveRequests = const [],
     this.salarySlips = const [],
@@ -35,7 +39,9 @@ class TeacherState {
 
   TeacherState copyWith({
     bool? isLoading,
+    bool? isLoadingSchedule,
     Map<String, dynamic>? classInfo,
+    Map<String, dynamic>? teachingSchedule,
     List<dynamic>? students,
     List<dynamic>? leaveRequests,
     List<dynamic>? salarySlips,
@@ -50,7 +56,9 @@ class TeacherState {
   }) {
     return TeacherState(
       isLoading: isLoading ?? this.isLoading,
+      isLoadingSchedule: isLoadingSchedule ?? this.isLoadingSchedule,
       classInfo: classInfo ?? this.classInfo,
+      teachingSchedule: teachingSchedule ?? this.teachingSchedule,
       students: students ?? this.students,
       leaveRequests: leaveRequests ?? this.leaveRequests,
       salarySlips: salarySlips ?? this.salarySlips,
@@ -110,9 +118,17 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
       final salaryRes = await _dio.get(ApiConstants.teacherSalarySlips);
       final salaryList = salaryRes.data['data'] ?? [];
 
+      // Fetch teacher teaching schedule
+      Map<String, dynamic>? scheduleData;
+      try {
+        final scheduleRes = await _dio.get(ApiConstants.teacherSchedule);
+        scheduleData = scheduleRes.data['data'];
+      } catch (_) {}
+
       state = state.copyWith(
         isLoading: false,
         classInfo: classData,
+        teachingSchedule: scheduleData,
         students: studentsList,
         leaveRequests: leavesList,
         salarySlips: salaryList,
@@ -120,6 +136,22 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
       );
     } on DioException catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.error?.toString());
+    }
+  }
+
+  Future<void> loadTeachingSchedule() async {
+    state = state.copyWith(isLoadingSchedule: true);
+    try {
+      final res = await _dio.get(ApiConstants.teacherSchedule);
+      state = state.copyWith(
+        isLoadingSchedule: false,
+        teachingSchedule: res.data['data'],
+      );
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isLoadingSchedule: false,
+        errorMessage: e.error?.toString(),
+      );
     }
   }
 
@@ -261,6 +293,29 @@ class TeacherNotifier extends StateNotifier<TeacherState> {
     } on DioException catch (e) {
       state = state.copyWith(errorMessage: e.error?.toString());
       return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> uploadHomeworkAttachment({
+    required String title,
+    required String fileData,
+    String? fileName,
+    String? fileType,
+  }) async {
+    try {
+      final res = await _dio.post(
+        ApiConstants.homeworkUpload,
+        data: {
+          'title': title,
+          'fileName': fileName,
+          'fileData': fileData,
+          'fileType': fileType,
+        },
+      );
+      return res.data['data'] as Map<String, dynamic>?;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.error?.toString());
+      return null;
     }
   }
 

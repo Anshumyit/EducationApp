@@ -24,7 +24,10 @@ const getMyClassInfo = asyncHandler(async (req, res) => {
     );
   }
 
-  const classroom = await ClassRoom.findById(teacher.assignedClass);
+  const classroom = await ClassRoom.findById(teacher.assignedClass)
+    .populate('classTeacher', 'name email phone avatar')
+    .populate('subjects.teacher', 'name email phone avatar')
+    .populate('timetable.periods.teacher', 'name email phone avatar');
   const totalStudents = await Student.countDocuments({ classId: teacher.assignedClass });
 
   return res.status(200).json(
@@ -36,6 +39,176 @@ const getMyClassInfo = asyncHandler(async (req, res) => {
         isClassTeacher: teacher.isClassTeacher,
       },
       'Class details retrieved'
+    )
+  );
+});
+
+/**
+ * Get logged-in teacher's comprehensive teaching schedule across all assigned classes & subjects
+ * Includes daily lecture timings, subjects to teach, classroom rooms, and today's schedule
+ */
+const getMyTeachingSchedule = asyncHandler(async (req, res) => {
+  const teacherId = req.user._id;
+  const teacherName = (req.user.name || '').trim();
+  const schoolId = req.user.schoolId;
+
+  const query = {};
+  if (schoolId) query.schoolId = schoolId;
+
+  const classrooms = await ClassRoom.find(query)
+    .populate('classTeacher', 'name email phone avatar')
+    .populate('subjects.teacher', 'name email phone avatar')
+    .populate('timetable.periods.teacher', 'name email phone avatar');
+
+  const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const weeklySchedule = {
+    Monday: [],
+    Tuesday: [],
+    Wednesday: [],
+    Thursday: [],
+    Friday: [],
+    Saturday: [],
+  };
+
+  const assignedClassesMap = new Map();
+  const assignedSubjectsSet = new Set();
+  let totalWeeklyPeriods = 0;
+
+  classrooms.forEach((cls) => {
+    const isClassTeacher = cls.classTeacher && cls.classTeacher._id.toString() === teacherId.toString();
+
+    // Collect subjects explicitly assigned to this teacher in this class
+    const mySubjectsInClass = (cls.subjects || []).filter((s) => {
+      return s.teacher && s.teacher._id.toString() === teacherId.toString();
+    });
+
+    mySubjectsInClass.forEach((s) => {
+      assignedSubjectsSet.add(s.name);
+      if (!assignedClassesMap.has(cls._id.toString())) {
+        assignedClassesMap.set(cls._id.toString(), {
+          classId: cls._id,
+          name: cls.name,
+          section: cls.section,
+          displayName: `${cls.name} - ${cls.section}`,
+          roomNumber: cls.roomNumber,
+          isClassTeacher,
+          subjects: [],
+        });
+      }
+      assignedClassesMap.get(cls._id.toString()).subjects.push(s.name);
+    });
+
+    if (isClassTeacher && !assignedClassesMap.has(cls._id.toString())) {
+      assignedClassesMap.set(cls._id.toString(), {
+        classId: cls._id,
+        name: cls.name,
+        section: cls.section,
+        displayName: `${cls.name} - ${cls.section}`,
+        roomNumber: cls.roomNumber,
+        isClassTeacher: true,
+        subjects: [],
+      });
+    }
+
+    // Process timetable
+    (cls.timetable || []).forEach((daySchedule) => {
+      const day = daySchedule.day;
+      if (!weeklySchedule[day]) weeklySchedule[day] = [];
+
+      (daySchedule.periods || []).forEach((period) => {
+        // Check if this period belongs to this teacher:
+        // 1. Matched by period teacher ObjectId
+        const matchesTeacherId = period.teacher && period.teacher._id
+          ? period.teacher._id.toString() === teacherId.toString()
+          : (period.teacher && period.teacher.toString() === teacherId.toString());
+
+        // 2. Matched by period teacherName
+        const matchesTeacherName = period.teacherName &&
+          period.teacherName.trim().toLowerCase() === teacherName.toLowerCase();
+
+        // 3. Matched by subject assignment in this class
+        const matchesSubject = mySubjectsInClass.some(
+          (s) => s.name.trim().toLowerCase() === (period.subject || '').trim().toLowerCase()
+        );
+
+        if (matchesTeacherId || matchesTeacherName || matchesSubject) {
+          totalWeeklyPeriods++;
+          assignedSubjectsSet.add(period.subject);
+
+          if (!assignedClassesMap.has(cls._id.toString())) {
+            assignedClassesMap.set(cls._id.toString(), {
+              classId: cls._id,
+              name: cls.name,
+              section: cls.section,
+              displayName: `${cls.name} - ${cls.section}`,
+              roomNumber: cls.roomNumber,
+              isClassTeacher,
+              subjects: [period.subject],
+            });
+          } else {
+            const classObj = assignedClassesMap.get(cls._id.toString());
+            if (!classObj.subjects.includes(period.subject)) {
+              classObj.subjects.push(period.subject);
+            }
+          }
+
+          weeklySchedule[day].push({
+            periodId: period._id,
+            periodNumber: period.periodNumber || (weeklySchedule[day].length + 1),
+            subject: period.subject,
+            startTime: period.startTime,
+            endTime: period.endTime,
+            timeSlot: `${period.startTime} - ${period.endTime}`,
+            classId: cls._id,
+            className: cls.name,
+            section: cls.section,
+            classDisplayName: `${cls.name} - ${cls.section}`,
+            roomNumber: period.roomNumber || cls.roomNumber || 'Room N/A',
+            isClassTeacher,
+            classTeacherName: cls.classTeacher?.name || 'Unassigned',
+          });
+        }
+      });
+    });
+  });
+
+  // Sort periods by periodNumber / startTime for each day
+  daysOrder.forEach((d) => {
+    if (weeklySchedule[d]) {
+      weeklySchedule[d].sort((a, b) => (a.periodNumber || 0) - (b.periodNumber || 0));
+    }
+  });
+
+  // Determine current day in local time
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const todayDayName = dayNames[new Date().getDay()];
+  const todaySchedule = weeklySchedule[todayDayName] || [];
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        teacher: {
+          id: req.user._id,
+          name: req.user.name,
+          email: req.user.email,
+          designation: req.user.designation || 'Faculty Member',
+          assignedClass: req.user.assignedClass,
+          isClassTeacher: req.user.isClassTeacher,
+        },
+        todayDay: todayDayName,
+        todaySchedule,
+        weeklySchedule,
+        assignedClasses: Array.from(assignedClassesMap.values()),
+        assignedSubjects: Array.from(assignedSubjectsSet),
+        summary: {
+          totalWeeklyPeriods,
+          totalPeriodsToday: todaySchedule.length,
+          totalAssignedClasses: assignedClassesMap.size,
+          totalAssignedSubjects: assignedSubjectsSet.size,
+        },
+      },
+      'Teacher teaching schedule retrieved successfully'
     )
   );
 });
@@ -330,6 +503,7 @@ const deleteDailySyllabusLog = asyncHandler(async (req, res) => {
 
 module.exports = {
   getMyClassInfo,
+  getMyTeachingSchedule,
   getClassStudents,
   getStudentDetail,
   sendClassNotice,

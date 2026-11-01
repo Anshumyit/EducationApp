@@ -331,6 +331,44 @@ class AdminNotifier extends StateNotifier<AdminState> {
     }
   }
 
+  Future<Map<String, dynamic>?> fetchClassTimetable(String classId) async {
+    try {
+      final res = await _dio.get(ApiConstants.classTimetable(classId));
+      return res.data['data'];
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.response?.data?['message'] ?? e.error?.toString());
+      return null;
+    }
+  }
+
+  Future<bool> saveClassTimetable(String classId, List<dynamic> timetable) async {
+    try {
+      await _dio.put(
+        ApiConstants.classTimetable(classId),
+        data: {'timetable': timetable},
+      );
+      await loadClasses();
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.response?.data?['message'] ?? e.error?.toString());
+      return false;
+    }
+  }
+
+  Future<bool> assignSubjectTeacher(String classId, String subjectName, String teacherId) async {
+    try {
+      await _dio.post(
+        ApiConstants.assignSubjectTeacher(classId),
+        data: {'subjectName': subjectName, 'teacherId': teacherId},
+      );
+      await loadClasses();
+      return true;
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.response?.data?['message'] ?? e.error?.toString());
+      return false;
+    }
+  }
+
   Future<bool> createTeacher(Map<String, dynamic> data) async {
     try {
       await _dio.post(ApiConstants.adminTeachers, data: data);

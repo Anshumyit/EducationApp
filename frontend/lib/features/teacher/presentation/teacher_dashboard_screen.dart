@@ -7,6 +7,8 @@ import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/stat_card.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../notifications/presentation/notifications_screen.dart';
+import '../../notifications/providers/notification_provider.dart';
 import '../providers/teacher_provider.dart';
 import 'attendance_report_screen.dart';
 import 'create_homework_screen.dart';
@@ -18,6 +20,7 @@ import 'marks_entry_screen.dart';
 import 'parent_communication_hub_screen.dart';
 import 'student_list_screen.dart';
 import 'teacher_salary_screen.dart';
+import 'teacher_schedule_screen.dart';
 
 
 class TeacherDashboardScreen extends ConsumerStatefulWidget {
@@ -172,8 +175,28 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
           ],
         ),
         actions: [
+          Consumer(
+            builder: (context, ref, _) {
+              final unreadCount = ref.watch(notificationProvider).unreadCount;
+              return IconButton(
+                icon: Badge(
+                  isLabelVisible: unreadCount > 0,
+                  label: Text('$unreadCount'),
+                  child: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+                ),
+                tooltip: 'Notifications & Alerts',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                  );
+                },
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.rose),
+            tooltip: 'Logout',
             onPressed: () => ref.read(authProvider.notifier).logout(),
           ),
         ],
@@ -223,6 +246,11 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                   ],
                 ),
               ),
+
+              const SizedBox(height: 18),
+
+              // Today's Teaching Schedule Card
+              _buildTodayScheduleCard(teacherState, context),
 
               const SizedBox(height: 18),
 
@@ -285,6 +313,19 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   children: [
+                    _buildHubTile(
+                      icon: Icons.calendar_month_rounded,
+                      color: AppColors.primary,
+                      title: 'My Teaching Timetable & Schedule',
+                      subtitle: 'Class-wise teaching time, period slots & subjects',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const TeacherScheduleScreen()),
+                        );
+                      },
+                    ),
+                    const Divider(color: AppColors.border, height: 1),
                     _buildHubTile(
                       icon: Icons.how_to_reg_rounded,
                       color: AppColors.emerald,
@@ -419,6 +460,158 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTodayScheduleCard(TeacherState teacherState, BuildContext context) {
+    final scheduleData = teacherState.teachingSchedule;
+    final todaySchedule = (scheduleData?['todaySchedule'] as List<dynamic>?) ?? [];
+    final todayDay = scheduleData?['todayDay'] ?? 'Today';
+
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.schedule_rounded, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Teaching Schedule • $todayDay',
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        '${todaySchedule.length} periods scheduled today',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TeacherScheduleScreen()),
+                  );
+                },
+                child: Text(
+                  'Full Timetable',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (todaySchedule.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.textSecondary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'No classes scheduled for today ($todayDay). Tap Full Timetable to see your weekly schedule.',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...todaySchedule.take(3).map((period) {
+              final periodNumber = period['periodNumber'] ?? 1;
+              final subject = period['subject'] ?? 'Subject';
+              final timeSlot = period['timeSlot'] ?? '${period['startTime']} - ${period['endTime']}';
+              final className = period['classDisplayName'] ?? period['className'] ?? '';
+              final room = period['roomNumber'] ?? '';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border.withOpacity(0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'P$periodNumber',
+                        style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            subject,
+                            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          ),
+                          Text(
+                            '$className • $room',
+                            style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.access_time_rounded, size: 12, color: AppColors.emerald),
+                          const SizedBox(width: 4),
+                          Text(
+                            timeSlot,
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.emerald),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
       ),
     );
   }

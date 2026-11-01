@@ -20,6 +20,9 @@ const {
   updateClassRoom,
   deleteClassRoom,
   assignClassTeacher,
+  getClassTimetable,
+  updateClassTimetable,
+  assignSubjectTeacher,
   getFeesOverview,
   getAllFeeRecords,
   generateFeeInvoices,
@@ -67,6 +70,9 @@ router.post('/classes', createClassRoom);
 router.put('/classes/:id', updateClassRoom);
 router.delete('/classes/:id', deleteClassRoom);
 router.post('/classes/assign-teacher', assignClassTeacher);
+router.get('/classes/:id/timetable', getClassTimetable);
+router.put('/classes/:id/timetable', updateClassTimetable);
+router.post('/classes/:id/assign-subject-teacher', assignSubjectTeacher);
 
 // 5. Fees & Payments
 router.get('/fees/overview', getFeesOverview);

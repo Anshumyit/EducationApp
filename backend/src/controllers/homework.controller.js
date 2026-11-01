@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const Homework = require('../models/homework.model');
 const HomeworkSubmission = require('../models/homeworkSubmission.model');
 const ClassRoom = require('../models/classroom.model');
@@ -6,6 +8,72 @@ const NotificationService = require('../services/notification.service');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
+
+/**
+ * Upload assignment attachment (PDF or Image)
+ * Supports base64 or file URL, saves to public/uploads/
+ */
+const uploadHomeworkAttachment = asyncHandler(async (req, res) => {
+  const { title, fileName, fileData, fileType } = req.body;
+
+  if (!fileData) {
+    throw new ApiError(400, 'File data (base64 or URL) is required');
+  }
+
+  // Ensure public/uploads directory exists
+  const uploadsDir = path.join(__dirname, '../../public/uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  let finalUrl = '';
+  let inferredType = fileType || 'DOCUMENT';
+  const effectiveName = fileName || title || 'assignment_document';
+
+  // If fileData is already an HTTP URL
+  if (fileData.startsWith('http://') || fileData.startsWith('https://')) {
+    finalUrl = fileData;
+    if (finalUrl.toLowerCase().endsWith('.pdf')) inferredType = 'PDF';
+    else if (/\.(jpg|jpeg|png|webp|gif)$/i.test(finalUrl)) inferredType = 'IMAGE';
+  } else {
+    // Decode base64
+    const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    const mimeType = matches ? matches[1] : '';
+    const base64Content = matches ? matches[2] : fileData;
+    const buffer = Buffer.from(base64Content, 'base64');
+
+    let ext = path.extname(effectiveName);
+    if (!ext) {
+      if (mimeType.includes('pdf') || fileType === 'PDF') ext = '.pdf';
+      else if (mimeType.includes('png')) ext = '.png';
+      else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) ext = '.jpg';
+      else if (fileType === 'IMAGE') ext = '.jpg';
+      else ext = '.pdf';
+    }
+
+    if (ext.toLowerCase() === '.pdf') inferredType = 'PDF';
+    else if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext.toLowerCase())) inferredType = 'IMAGE';
+
+    const safeBase = path.basename(effectiveName, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const uniqueFileName = `hw_${Date.now()}_${safeBase}${ext}`;
+    const targetFilePath = path.join(uploadsDir, uniqueFileName);
+
+    await fs.promises.writeFile(targetFilePath, buffer);
+    finalUrl = `/uploads/${uniqueFileName}`;
+  }
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        title: title || effectiveName,
+        fileUrl: finalUrl,
+        fileType: inferredType,
+      },
+      'Assignment attachment uploaded successfully'
+    )
+  );
+});
 
 /**
  * Teacher creates a subject-wise homework
@@ -337,6 +405,7 @@ const deleteHomework = asyncHandler(async (req, res) => {
 
 module.exports = {
   createHomework,
+  uploadHomeworkAttachment,
   getClassHomework,
   getHomeworkSubmissions,
   gradeSubmission,

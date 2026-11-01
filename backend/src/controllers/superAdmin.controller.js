@@ -1456,6 +1456,10 @@ const assignClassFaculty = asyncHandler(async (req, res) => {
     }));
   }
 
+  if (Array.isArray(req.body.timetable)) {
+    classroom.timetable = req.body.timetable;
+  }
+
   await classroom.save();
 
   await recordAudit({
@@ -1468,6 +1472,71 @@ const assignClassFaculty = asyncHandler(async (req, res) => {
   });
 
   return res.status(200).json(new ApiResponse(200, classroom, `Class ${className}-${section} faculty allocation committed`));
+});
+
+const getClassTimetableSuperAdmin = asyncHandler(async (req, res) => {
+  const { classId } = req.params;
+  const classroom = await ClassRoom.findById(classId)
+    .populate('classTeacher', 'name email phone avatar')
+    .populate('subjects.teacher', 'name email phone avatar')
+    .populate('timetable.periods.teacher', 'name email phone avatar');
+
+  if (!classroom) throw new ApiError(404, 'Classroom not found');
+
+  return res.status(200).json(
+    new ApiResponse(200, {
+      classroom: {
+        _id: classroom._id,
+        name: classroom.name,
+        section: classroom.section,
+        roomNumber: classroom.roomNumber,
+        classTeacher: classroom.classTeacher,
+        subjects: classroom.subjects,
+      },
+      timetable: classroom.timetable || [],
+    }, 'Timetable retrieved')
+  );
+});
+
+const updateClassTimetableSuperAdmin = asyncHandler(async (req, res) => {
+  const { classId } = req.params;
+  const { timetable } = req.body;
+
+  const classroom = await ClassRoom.findById(classId);
+  if (!classroom) throw new ApiError(404, 'Classroom not found');
+
+  if (Array.isArray(timetable)) {
+    for (const daySchedule of timetable) {
+      if (Array.isArray(daySchedule.periods)) {
+        for (const period of daySchedule.periods) {
+          if (period.teacher && !period.teacherName) {
+            const teacherUser = await User.findById(period.teacher);
+            if (teacherUser) period.teacherName = teacherUser.name;
+          }
+        }
+      }
+    }
+    classroom.timetable = timetable;
+    await classroom.save();
+  }
+
+  const updatedClassroom = await ClassRoom.findById(classId)
+    .populate('classTeacher', 'name email phone avatar')
+    .populate('subjects.teacher', 'name email phone avatar')
+    .populate('timetable.periods.teacher', 'name email phone avatar');
+
+  await recordAudit({
+    action: 'UPDATE_CLASS_TIMETABLE',
+    performedBy: req.user._id,
+    targetEntity: 'ClassRoom',
+    targetId: classroom._id,
+    schoolId: classroom.schoolId,
+    details: { className: classroom.name, section: classroom.section },
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, updatedClassroom, 'Timetable updated successfully by Super Admin')
+  );
 });
 
 const recordSuperAdminExam = asyncHandler(async (req, res) => {
@@ -1589,6 +1658,8 @@ module.exports = {
   // Classes & Allocations
   getSchoolClasses,
   assignClassFaculty,
+  getClassTimetableSuperAdmin,
+  updateClassTimetableSuperAdmin,
   // Biometric & GPS
   getAllBiometricDevices,
   createBiometricDevice,

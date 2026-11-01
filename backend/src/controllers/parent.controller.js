@@ -1,4 +1,5 @@
 const Student = require('../models/student.model');
+const ClassRoom = require('../models/classroom.model');
 const Attendance = require('../models/attendance.model');
 const Homework = require('../models/homework.model');
 const FeeRecord = require('../models/feeRecord.model');
@@ -91,8 +92,49 @@ const getHolidays = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, holidays, 'Holidays retrieved'));
 });
 
+/**
+ * Get child's classroom timetable & periods routine
+ */
+const getChildTimetable = asyncHandler(async (req, res) => {
+  const { studentId } = req.params;
+  const parent = req.user;
+
+  const student = await Student.findOne({ _id: studentId, parentId: parent._id });
+  if (!student) {
+    throw new ApiError(404, 'Child profile not found');
+  }
+
+  const classroom = await ClassRoom.findById(student.classId)
+    .populate('classTeacher', 'name email phone avatar')
+    .populate('subjects.teacher', 'name email phone avatar')
+    .populate('timetable.periods.teacher', 'name email phone avatar');
+
+  if (!classroom) {
+    throw new ApiError(404, 'Classroom not found for child');
+  }
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        classroom: {
+          _id: classroom._id,
+          name: classroom.name,
+          section: classroom.section,
+          roomNumber: classroom.roomNumber,
+          classTeacher: classroom.classTeacher,
+          subjects: classroom.subjects,
+        },
+        timetable: classroom.timetable || [],
+      },
+      'Child class timetable retrieved successfully'
+    )
+  );
+});
+
 module.exports = {
   getMyChildren,
   getChildDashboard,
+  getChildTimetable,
   getHolidays,
 };

@@ -349,6 +349,120 @@ const seed = async () => {
       employeeId: 'TCH-SXIS-103',
     });
 
+    // Assign subjects & full weekly timetable for Class 10-A
+    class10A.subjects = [
+      { name: 'Mathematics', code: 'MATH-101', teacher: teacherRahul._id },
+      { name: 'Physics', code: 'PHY-102', teacher: teacherRahul._id },
+      { name: 'English Literature', code: 'ENG-103', teacher: teacherPriya._id },
+      { name: 'Social Studies', code: 'SST-104', teacher: teacherPriya._id },
+      { name: 'Computer Science', code: 'CS-105', teacher: teacherAmit._id },
+    ];
+
+    const generateWeeklyTimetable = (isSectionA = true) => {
+      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      return days.map((day) => ({
+        day,
+        periods: isSectionA
+          ? [
+              {
+                periodNumber: 1,
+                subject: 'Mathematics',
+                startTime: '08:30 AM',
+                endTime: '09:15 AM',
+                teacher: teacherRahul._id,
+                teacherName: teacherRahul.name,
+                roomNumber: 'Room 204',
+              },
+              {
+                periodNumber: 2,
+                subject: 'English Literature',
+                startTime: '09:15 AM',
+                endTime: '10:00 AM',
+                teacher: teacherPriya._id,
+                teacherName: teacherPriya.name,
+                roomNumber: 'Room 204',
+              },
+              {
+                periodNumber: 3,
+                subject: 'Physics',
+                startTime: '10:00 AM',
+                endTime: '10:45 AM',
+                teacher: teacherRahul._id,
+                teacherName: teacherRahul.name,
+                roomNumber: 'Science Lab 1',
+              },
+              {
+                periodNumber: 4,
+                subject: 'Social Studies',
+                startTime: '11:15 AM',
+                endTime: '12:00 PM',
+                teacher: teacherPriya._id,
+                teacherName: teacherPriya.name,
+                roomNumber: 'Room 204',
+              },
+              {
+                periodNumber: 5,
+                subject: 'Computer Science',
+                startTime: '12:00 PM',
+                endTime: '12:45 PM',
+                teacher: teacherAmit._id,
+                teacherName: teacherAmit.name,
+                roomNumber: 'Computer Lab A',
+              },
+            ]
+          : [
+              {
+                periodNumber: 1,
+                subject: 'English Literature',
+                startTime: '08:30 AM',
+                endTime: '09:15 AM',
+                teacher: teacherPriya._id,
+                teacherName: teacherPriya.name,
+                roomNumber: 'Room 205',
+              },
+              {
+                periodNumber: 2,
+                subject: 'Mathematics',
+                startTime: '09:15 AM',
+                endTime: '10:00 AM',
+                teacher: teacherRahul._id,
+                teacherName: teacherRahul.name,
+                roomNumber: 'Room 205',
+              },
+              {
+                periodNumber: 3,
+                subject: 'Computer Science',
+                startTime: '10:00 AM',
+                endTime: '10:45 AM',
+                teacher: teacherAmit._id,
+                teacherName: teacherAmit.name,
+                roomNumber: 'Computer Lab A',
+              },
+              {
+                periodNumber: 4,
+                subject: 'Social Studies',
+                startTime: '11:15 AM',
+                endTime: '12:00 PM',
+                teacher: teacherPriya._id,
+                teacherName: teacherPriya.name,
+                roomNumber: 'Room 205',
+              },
+            ],
+      }));
+    };
+
+    class10A.timetable = generateWeeklyTimetable(true);
+    await class10A.save();
+
+    class10B.subjects = [
+      { name: 'Mathematics', code: 'MATH-101', teacher: teacherRahul._id },
+      { name: 'English Literature', code: 'ENG-103', teacher: teacherPriya._id },
+      { name: 'Social Studies', code: 'SST-104', teacher: teacherPriya._id },
+      { name: 'Computer Science', code: 'CS-105', teacher: teacherAmit._id },
+    ];
+    class10B.timetable = generateWeeklyTimetable(false);
+    await class10B.save();
+
     // 7. Create Parents & Students
     const parentRajesh = await User.create({
       name: 'Rajesh Sharma',

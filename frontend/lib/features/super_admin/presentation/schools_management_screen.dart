@@ -8,6 +8,7 @@ import '../../../core/widgets/glass_card.dart';
 import '../models/super_admin_models.dart';
 import '../providers/super_admin_provider.dart';
 import 'permission_matrix_screen.dart';
+import '../../admin/presentation/class_management_screen.dart';
 
 class SchoolsManagementScreen extends ConsumerStatefulWidget {
   const SchoolsManagementScreen({super.key});
@@ -264,6 +265,17 @@ class _SchoolsManagementScreenState extends ConsumerState<SchoolsManagementScree
                   ),
                 ],
                 const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.calendar_month_rounded, color: AppColors.accent),
+                  tooltip: 'Classes & Faculty Timetable',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ClassManagementScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(width: 4),
                 IconButton(
                   icon: const Icon(Icons.tune_rounded, color: AppColors.primaryLight),
                   tooltip: 'Configure Modules & Limits',

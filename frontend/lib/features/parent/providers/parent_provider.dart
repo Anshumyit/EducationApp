@@ -153,6 +153,16 @@ class ParentNotifier extends StateNotifier<ParentState> {
       return false;
     }
   }
+
+  Future<Map<String, dynamic>?> fetchChildTimetable(String studentId) async {
+    try {
+      final res = await _dio.get(ApiConstants.childTimetable(studentId));
+      return res.data['data'];
+    } on DioException catch (e) {
+      state = state.copyWith(errorMessage: e.response?.data?['message'] ?? e.error?.toString());
+      return null;
+    }
+  }
 }
 
 final parentProvider = StateNotifierProvider<ParentNotifier, ParentState>((ref) {

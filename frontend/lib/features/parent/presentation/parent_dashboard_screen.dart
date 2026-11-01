@@ -5,10 +5,13 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/stat_card.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../notifications/presentation/notifications_screen.dart';
+import '../../notifications/providers/notification_provider.dart';
 import '../providers/parent_provider.dart';
 import 'apply_leave_screen.dart';
 import 'child_attendance_screen.dart';
 import 'child_results_screen.dart';
+import 'child_timetable_screen.dart';
 import 'fee_management_screen.dart';
 import 'holiday_calendar_screen.dart';
 import 'homework_tracker_screen.dart';
@@ -57,8 +60,28 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
           ],
         ),
         actions: [
+          Consumer(
+            builder: (context, ref, _) {
+              final unreadCount = ref.watch(notificationProvider).unreadCount;
+              return IconButton(
+                icon: Badge(
+                  isLabelVisible: unreadCount > 0,
+                  label: Text('$unreadCount'),
+                  child: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+                ),
+                tooltip: 'Notifications & Alerts',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                  );
+                },
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.rose),
+            tooltip: 'Logout',
             onPressed: () => ref.read(authProvider.notifier).logout(),
           ),
         ],
@@ -312,6 +335,25 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   children: [
+                    _buildServiceTile(
+                      icon: Icons.calendar_month_rounded,
+                      color: AppColors.primary,
+                      title: 'Class Routine & Timetable',
+                      subtitle: 'Weekly timetable, lecture timings & assigned subject faculty',
+                      onTap: () {
+                        if (child != null) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => ChildTimetableScreen(child: child)),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please select a child profile first')),
+                          );
+                        }
+                      },
+                    ),
+                    const Divider(color: AppColors.border, height: 1),
                     _buildServiceTile(
                       icon: Icons.calendar_today_rounded,
                       color: AppColors.emerald,

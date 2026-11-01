@@ -40,14 +40,16 @@ const classroomSchema = new mongoose.Schema(
     ],
     timetable: [
       {
-        day: { type: String, enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] },
+        day: { type: String, enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] },
         periods: [
           {
             periodNumber: Number,
-            subject: String,
-            startTime: String,
-            endTime: String,
-            teacherName: String,
+            subject: { type: String, required: true },
+            startTime: { type: String, required: true },
+            endTime: { type: String, required: true },
+            teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+            teacherName: { type: String, default: '' },
+            roomNumber: { type: String, default: '' },
           },
         ],
       },

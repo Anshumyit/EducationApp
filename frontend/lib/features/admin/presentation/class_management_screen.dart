@@ -7,6 +7,7 @@ import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../providers/admin_provider.dart';
+import 'class_timetable_screen.dart';
 
 class ClassManagementScreen extends ConsumerStatefulWidget {
   const ClassManagementScreen({super.key});
@@ -452,7 +453,12 @@ class _ClassManagementScreenState extends ConsumerState<ClassManagementScreen> {
                             TextButton.icon(
                               icon: const Icon(Icons.schedule_rounded, size: 16, color: AppColors.accent),
                               label: const Text('Timetable & Periods', style: TextStyle(color: AppColors.accent, fontSize: 12)),
-                              onPressed: () => _showTimetableModal(context, c),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => ClassTimetableScreen(classroom: c)),
+                                );
+                              },
                             ),
                           ],
                         ),
